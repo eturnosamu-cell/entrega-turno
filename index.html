@@ -2174,7 +2174,7 @@ const actions = {
       <p class="muted">Al guardar, la entrega pasa al historial y queda de solo lectura. Se abre una entrega nueva en blanco.${(store.settings.backup || {}).auto !== false ? (backupMode() === 'drive' || backupMode() === 'script' ? ' Se crea el PDF y se sube a Google Drive.' : backupMode() === 'folder' ? ' Se crea el PDF y se guarda en la carpeta de respaldo.' : backupMode() === 'none' ? '' : ' Se crea el PDF de la entrega.') : ''}</p>
       <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Seguir editando</button><button type="button" class="btn primary" data-act="confirmSave">${list.length ? 'Guardar de todas formas' : 'Guardar entrega'}</button></div>`);
   },
-  logout() { logout(); },
+  logout() { if (SES && SES.code === 'PRUEBA') { SES = null; try { localStorage.removeItem(SES_KEY); } catch (e) {} paintUser(); showLogin(); return; } logout(); },
   useKey() { pickerOpen = false; showLogin(); },
   accesos() { accesosSheet(); },
   async accSet(a) {
@@ -2806,6 +2806,7 @@ async function testInit() {
 const authToken = () => (SES && SES.token) || (document.documentElement.classList.contains('tvmode') ? (tvToken() || testToken()) : testToken());
 const tvToken = () => { try { return localStorage.getItem(TV_KEY) || ''; } catch (e) { return ''; } };
 function accLabel(code, nombre) {
+  if (code === 'PRUEBA') return 'Modo prueba';
   if (JEF_NOMBRE[code] || nombre) return `${nombre || JEF_NOMBRE[code]} (${code})`;
   const p = store.settings.personal.find(x => x.clave.toUpperCase() === code);
   return p ? shortLabel(p) : code;
@@ -2818,8 +2819,8 @@ function loadSes() {
 }
 function paintUser() {
   const box = $('#userBox'); if (!box) return;
-  box.hidden = !SES; if (SES) $('#userName').textContent = sesLabel() + (SES.prueba ? ' · prueba' : SES.token ? '' : ' · sin conexión');
-  const b = box.querySelector('[data-act="logout"]'); if (b) b.textContent = SES && SES.prueba ? 'Cambiar persona' : 'Salir';
+  box.hidden = !SES; if (SES) $('#userName').textContent = sesLabel() + (SES.code === 'PRUEBA' ? '' : SES.prueba ? ' · prueba' : SES.token ? '' : ' · sin conexión');
+  const b = box.querySelector('[data-act="logout"]'); if (b) b.textContent = SES && SES.code === 'PRUEBA' ? 'Entrar con clave' : SES && SES.prueba ? 'Cambiar persona' : 'Salir';
 }
 function showLogin(msg) {
   const logo = (document.getElementById('brandLogo') || {}).src || '';
@@ -2871,11 +2872,20 @@ function pickPerson() {
 document.addEventListener('submit', ev => { if (ev.target.id === 'pickForm') { ev.preventDefault(); pickPerson(); } });
 function startEntry(msg) {
   if (!hasTest()) { showLogin(msg); return; }
-  showPicker(msg);
+  if (testTokObj()) { enterTest(msg); return; }
+  $('#loginHost').innerHTML = '<div class="login"><div class="login-card"><h2>Entrega de turno</h2><p class="muted">Conectando…</p></div></div>';
   testInit().then(ok => {
     if (!ok) { showLogin('El enlace de prueba ya no está activo. Entra con tu código y clave.'); return; }
-    SY.noScript = false; syncStart(); syncSoon(); refreshPicker();
+    enterTest(msg);
   });
+}
+/* modo prueba abierto: entra directo, sin nombre ni clave */
+function enterTest(msg) {
+  const t = testTokObj(); if (!t) { showLogin(msg); return; }
+  SES = {code:'PRUEBA', rol:'R', admin:false, nombre:'', token:t.token, exp:t.exp, prueba:true};
+  try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {}
+  hideLogin(); paintUser(); if (msg) toast(msg.replace(' Sesión cerrada.', ''));
+  SY.noScript = false; syncStart(); syncSoon();
 }
 function hideLogin() { pickerOpen = false; $('#loginHost').innerHTML = ''; document.getElementById('app').removeAttribute('aria-hidden'); }
 const LOGIN_ERR = {clave:'Clave incorrecta.', codigo:'No existe ese código o todavía no tiene clave. Pídela a la jefatura.', bloqueado:'Demasiados intentos con ese código. Espera 15 minutos.', bloqueo_general:'Demasiados intentos fallidos en el sistema. Espera unos minutos.', permiso:'Ese código no tiene permiso para esto.'};
