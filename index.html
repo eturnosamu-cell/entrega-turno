@@ -362,6 +362,9 @@ fieldset:disabled .xbtn{visibility:hidden}
 .login-card .muted{text-align:center;margin:0}
 .login-card .small{font-size:12.5px}
 .login-card input{font-size:20px;text-align:center;letter-spacing:.08em}
+.test-tag{margin:-2px 0 0;text-align:center;font:700 12px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--warn-ink);background:var(--warn-soft);padding:7px 10px;border-radius:999px;align-self:center}
+.linkbtn{background:none;border:0;color:var(--accent);text-decoration:underline;font-size:14px;cursor:pointer;padding:4px}
+.login-card select{font-size:18px;min-height:52px}
 .login-who{margin:-4px 0 0;min-height:20px;text-align:center;font-weight:600;color:var(--accent)}
 .login-err{margin:0;min-height:20px;text-align:center;color:var(--crit-ink);font-weight:600}
 .acclist{display:flex;flex-direction:column;gap:6px}
@@ -2172,6 +2175,7 @@ const actions = {
       <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Seguir editando</button><button type="button" class="btn primary" data-act="confirmSave">${list.length ? 'Guardar de todas formas' : 'Guardar entrega'}</button></div>`);
   },
   logout() { logout(); },
+  useKey() { pickerOpen = false; showLogin(); },
   accesos() { accesosSheet(); },
   async accSet(a) {
     const code = a.dataset.code, inp = document.querySelector(`[data-accpin="${CSS.escape(code)}"]`), v = (inp.value || '').trim();
@@ -2781,7 +2785,25 @@ function renderAll() {
 const SES_KEY = 'samu-entrega-sesion', OFF_KEY = 'samu-entrega-offline', TV_KEY = 'samu-entrega-tv';
 const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora asistencial'};
 let SES = null, loginBusy = false;
-const authToken = () => (SES && SES.token) || (document.documentElement.classList.contains('tvmode') ? tvToken() : '');
+const TEST_TOK = 'samu-entrega-prueba';
+const URL_KEY = (() => { try { return new URLSearchParams(location.search).get('k') || ''; } catch (e) { return ''; } })();
+function testTokObj() { try { const t = JSON.parse(localStorage.getItem(TEST_TOK) || 'null'); return t && t.exp > Date.now() && (!URL_KEY || t.k === URL_KEY) ? t : null; } catch (e) { return null; } }
+const testToken = () => { const t = testTokObj(); return t ? t.token : ''; };
+const hasTest = () => !!(URL_KEY || testTokObj());
+/* modo prueba: el enlace trae una llave (?k=…) y Google entrega un permiso sin código ni clave */
+async function testInit() {
+  if (testTokObj()) return true;
+  if (!URL_KEY) return false;
+  const url = scriptCfg().url; if (!url) return false;
+  try {
+    const r = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({action:'prueba', k:URL_KEY}), redirect:'follow'});
+    const j = JSON.parse(await r.text());
+    if (!j.ok) { try { localStorage.removeItem(TEST_TOK); } catch (e) {} return false; }
+    localStorage.setItem(TEST_TOK, JSON.stringify({k:URL_KEY, token:j.token, exp:j.exp}));
+    return true;
+  } catch (e) { return false; }
+}
+const authToken = () => (SES && SES.token) || (document.documentElement.classList.contains('tvmode') ? (tvToken() || testToken()) : testToken());
 const tvToken = () => { try { return localStorage.getItem(TV_KEY) || ''; } catch (e) { return ''; } };
 function accLabel(code, nombre) {
   if (JEF_NOMBRE[code] || nombre) return `${nombre || JEF_NOMBRE[code]} (${code})`;
@@ -2796,7 +2818,8 @@ function loadSes() {
 }
 function paintUser() {
   const box = $('#userBox'); if (!box) return;
-  box.hidden = !SES; if (SES) $('#userName').textContent = sesLabel() + (SES.token ? '' : ' · sin conexión');
+  box.hidden = !SES; if (SES) $('#userName').textContent = sesLabel() + (SES.prueba ? ' · prueba' : SES.token ? '' : ' · sin conexión');
+  const b = box.querySelector('[data-act="logout"]'); if (b) b.textContent = SES && SES.prueba ? 'Cambiar persona' : 'Salir';
 }
 function showLogin(msg) {
   const logo = (document.getElementById('brandLogo') || {}).src || '';
@@ -2815,7 +2838,46 @@ function showLogin(msg) {
   document.getElementById('app').setAttribute('aria-hidden', 'true');
   setTimeout(() => { const c = $('#logCode'); if (c) c.focus(); }, 30);
 }
-function hideLogin() { $('#loginHost').innerHTML = ''; document.getElementById('app').removeAttribute('aria-hidden'); }
+let pickerOpen = false;
+function pickerOptions() {
+  const reas = [...store.settings.personal].filter(p => rolOf(p.clave) === 'R').sort(claveSort);
+  return reas.length ? '<option value="">Elige tu nombre…</option>' + reas.map(p => `<option value="${esc(p.clave.toUpperCase())}">${esc(shortLabel(p))}</option>`).join('') : '<option value="">Cargando la nómina…</option>';
+}
+function showPicker(msg) {
+  pickerOpen = true;
+  const logo = (document.getElementById('brandLogo') || {}).src || '';
+  $('#loginHost').innerHTML = `<div class="login"><form class="login-card" id="pickForm" autocomplete="off">
+    ${logo ? `<img src="${logo}" alt="" width="70" height="74">` : ''}
+    <div class="eyebrow">SAMU 131 · Magallanes</div>
+    <h2>Entrega de turno</h2>
+    <p class="test-tag">Versión de prueba · sin clave</p>
+    <label class="fld" for="pickWho"><span class="lbl">¿Quién eres?</span><select id="pickWho">${pickerOptions()}</select></label>
+    <p class="login-err" id="pickErr">${msg ? esc(msg) : ''}</p>
+    <button type="submit" class="btn primary lg">Entrar</button>
+    <button type="button" class="linkbtn" data-act="useKey">Entrar con código y clave</button>
+  </form></div>`;
+  document.getElementById('app').setAttribute('aria-hidden', 'true');
+}
+function refreshPicker() { const s = $('#pickWho'); if (s && pickerOpen) { const v = s.value; s.innerHTML = pickerOptions(); s.value = v; } }
+function pickPerson() {
+  const code = ($('#pickWho') || {}).value, t = testTokObj();
+  if (!code) { $('#pickErr').textContent = 'Elige tu nombre en la lista.'; return; }
+  if (!t) { $('#pickErr').textContent = 'Conectando con Google… inténtalo en unos segundos.'; testInit().then(refreshPicker); return; }
+  SES = {code, rol:'R', admin:false, nombre:'', token:t.token, exp:t.exp, prueba:true};
+  try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {}
+  pickerOpen = false; hideLogin(); paintUser(); toast(`Hola, ${sesLabel()}`);
+  SY.noScript = false; syncStart(); syncSoon();
+}
+document.addEventListener('submit', ev => { if (ev.target.id === 'pickForm') { ev.preventDefault(); pickPerson(); } });
+function startEntry(msg) {
+  if (!hasTest()) { showLogin(msg); return; }
+  showPicker(msg);
+  testInit().then(ok => {
+    if (!ok) { showLogin('El enlace de prueba ya no está activo. Entra con tu código y clave.'); return; }
+    SY.noScript = false; syncStart(); syncSoon(); refreshPicker();
+  });
+}
+function hideLogin() { pickerOpen = false; $('#loginHost').innerHTML = ''; document.getElementById('app').removeAttribute('aria-hidden'); }
 const LOGIN_ERR = {clave:'Clave incorrecta.', codigo:'No existe ese código o todavía no tiene clave. Pídela a la jefatura.', bloqueado:'Demasiados intentos con ese código. Espera 15 minutos.', bloqueo_general:'Demasiados intentos fallidos en el sistema. Espera unos minutos.', permiso:'Ese código no tiene permiso para esto.'};
 async function loginCall(code, pin, device) {
   const url = scriptCfg().url; if (!url) throw {code:'net'};
@@ -2852,7 +2914,8 @@ async function tryLogin() {
 }
 function logout(msg) {
   SES = null; try { localStorage.removeItem(SES_KEY); } catch (e) {}
-  settingsUntil = 0; closeSheet(); paintUser(); syncStop(); showLogin(msg);
+  settingsUntil = 0; closeSheet(); paintUser();
+  if (hasTest()) startEntry(msg); else { syncStop(); showLogin(msg); }
 }
 document.addEventListener('submit', ev => { if (ev.target.id === 'loginForm') { ev.preventDefault(); tryLogin(); } });
 document.addEventListener('input', ev => {
@@ -2861,7 +2924,7 @@ document.addEventListener('input', ev => {
   if (w) w.textContent = JEF_NOMBRE[code] || (store.settings.personal.some(x => x.clave.toUpperCase() === code) ? accLabel(code) : '');
 });
 /* la sesión venció o la clave cambió en otro equipo */
-function authLost() { if (document.documentElement.classList.contains('tvmode')) return; if (SES) logout('Tu sesión venció o tu clave cambió. Vuelve a entrar.'); }
+function authLost() { if (document.documentElement.classList.contains('tvmode')) return; if (SES && SES.prueba) { try { localStorage.removeItem(TEST_TOK); } catch (e) {} } if (SES) logout('Tu sesión venció o tu clave cambió. Vuelve a entrar.'); }
 
 async function accesosSheet() {
   openSheet('<h2>Claves de acceso</h2><p class="muted">Cargando desde Google…</p>', 'wide');
@@ -2962,7 +3025,7 @@ function adoptSync(next) {
   store.history = Object.values(next.hist || {}).filter(h => h && !h._del).map(h => normalize(clone(h)));
   ensureStock(); sortHistory();
   SY.adopting = true; persist(); SY.adopting = false;
-  paintUser();
+  paintUser(); refreshPicker();
   if (view.mode === 'history' && !store.history.some(h => h.id === view.id)) view = {mode:'draft', id:null};
   const a = document.activeElement;
   const busy = cbxCur || $('#sheetHost').innerHTML || (a && a.closest && a.closest('#fs') && /INPUT|TEXTAREA|SELECT/.test(a.tagName));
@@ -3041,7 +3104,7 @@ function syncPaint() {
 const TVSY = {rev:0, live:null, hist:{}, busy:false};
 async function tvPull() {
   if (!syncOn() || TVSY.busy) return false;
-  if (!tvToken()) return false;
+  if (!authToken()) return false;
   TVSY.busy = true;
   try {
     const r = await syncPost({action:'pull', since:TVSY.rev});
@@ -3061,7 +3124,7 @@ async function tvPull() {
 }
 function tvActPaint() {
   const box = document.getElementById('tvAct'); if (!box) return;
-  box.hidden = !!tvToken();
+  box.hidden = !!(tvToken() || testToken());
 }
 async function tvActivate() {
   const code = (document.getElementById('tvCode').value || '').replace(/[\s·-]/g, '').toUpperCase(), pin = document.getElementById('tvPin').value || '', err = document.getElementById('tvActErr');
@@ -3253,7 +3316,7 @@ function startTV() {
   const enterFs = async () => { try { await document.documentElement.requestFullscreen({navigationUI:'hide'}); } catch (e) {} awake(); paintFs(); };
   const paintFs = () => {
     const fs = isFs();
-    const actPend = !tvToken() && !TV_LOCAL;
+    const actPend = !tvToken() && !testToken() && !TV_LOCAL;
     document.getElementById('tvGo').hidden = !actPend && (fs || TV_GO_DONE);
     document.getElementById('tvFsBtn').hidden = fs || !TV_GO_DONE;
     document.getElementById('tvHint').textContent = (wl ? '● Pantalla siempre encendida' : 'La pantalla podría apagarse: toca la pantalla una vez') + (fs ? ' · Doble clic para salir de pantalla completa' : ' · Doble clic para pantalla completa');
@@ -3262,11 +3325,12 @@ function startTV() {
   document.getElementById('tvLocal').addEventListener('click', ev => { ev.stopPropagation(); TV_LOCAL = true; TV_GO_DONE = true; enterFs(); });
   document.getElementById('tvGoBtn').addEventListener('click', async ev => {
     ev.stopPropagation();
-    const needAct = !tvToken() && (document.getElementById('tvCode').value || '').trim();
+    const needAct = !tvToken() && !testToken() && (document.getElementById('tvCode').value || '').trim();
     enterFs(); TV_GO_DONE = true; paintFs();
     if (needAct && !(await tvActivate())) { TV_GO_DONE = false; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); paintFs(); }
   });
   tvActPaint();
+  testInit().then(ok => { if (ok) { tvActPaint(); window.dispatchEvent(new Event('resize')); tvPull().then(ch => { if (ch) tvRender(); }); } });
   document.getElementById('tvFsBtn').addEventListener('click', ev => { ev.stopPropagation(); enterFs(); });
   host.addEventListener('dblclick', () => { TV_GO_DONE = true; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else enterFs(); });
   host.addEventListener('click', () => { awake(); });
@@ -3288,7 +3352,8 @@ else {
 try { localStorage.setItem(VER_KEY, APP_VER); } catch (e) {}
 const storageOk = load();
 renderAll();
-loadSes(); paintUser(); if (!SES) showLogin();
+loadSes(); paintUser(); if (!SES) startEntry();
+else if (SES.prueba) testInit();
 setSave(storageOk ? 'ok' : 'fail');
 initBackup();
 syncStart();

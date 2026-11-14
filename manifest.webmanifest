@@ -1,7 +1,6 @@
 {
  "name": "Entrega de Turno SAMU",
  "short_name": "Entrega SAMU",
- "start_url": "./",
  "scope": "./",
  "display": "standalone",
  "background_color": "#262f7c",
