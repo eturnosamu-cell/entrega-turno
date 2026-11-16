@@ -3366,9 +3366,12 @@ function tvRender() {
         + (list.length > 5 ? `<p class="tv-none">y ${list.length - 5} más</p>` : '');
   } else stockHtml = '<p class="tv-none">Se muestra al empezar la próxima entrega.</p>';
 
-  const resv = (store.settings.flota || []).filter(f => filled(f.num) && e.reserva && e.reserva[f.num] === 'Disponible' && !e.moviles.some(m => m.id === flotaLabel(f)));
-  const resHtml = resv.length ? resv.slice(0, 5).map(f => `<div class="tv-li"><b>Móvil ${esc(f.num)}</b><span class="tv-pill ok">Disponible</span></div>`).join('')
-    : '<p class="tv-none">Sin móviles de reposición marcados como disponibles.</p>';
+  /* móviles de reposición con todos sus estados: disponibles primero */
+  const RES_PILL = {'Disponible':'ok', 'Préstamo':'soft', 'Mantención':'warn', 'En taller':'crit'};
+  const resv = (store.settings.flota || []).filter(f => filled(f.num) && e.reserva && RES_EST.includes(e.reserva[f.num]) && !e.moviles.some(m => m.id === flotaLabel(f)))
+    .sort((a, b) => RES_EST.indexOf(e.reserva[a.num]) - RES_EST.indexOf(e.reserva[b.num]));
+  const resHtml = resv.length ? resv.slice(0, 5).map(f => `<div class="tv-li"><b>Móvil ${esc(f.num)}</b><span class="tv-pill ${RES_PILL[e.reserva[f.num]] || 'soft'}">${esc(e.reserva[f.num])}</span></div>`).join('') + (resv.length > 5 ? `<p class="tv-none">y ${resv.length - 5} más</p>` : '')
+    : '<p class="tv-none">Sin estado registrado para los móviles de reposición.</p>';
   const ox = e.oxigeno || {};
   const o2Html = [['g', '1 m³'], ['p', '0,5 m³']].map(([k, n]) => {
     const v = num(ox[k]);
@@ -3389,7 +3392,7 @@ function tvRender() {
     <div class="tv-bot">
       <section class="tv-pan"><div class="tv-sec">Novedades del turno<span>${items.length ? items.length + (items.length === 1 ? ' novedad' : ' novedades') : ''}</span></div>
         <div class="tv-win"><div class="tv-roll" id="tvRoll">${items.join('') || '<p class="tv-none">Sin novedades por ahora.</p>'}</div></div></section>
-      <section class="tv-pan"><div class="tv-sec">Para reposición</div>${resHtml}</section>
+      <section class="tv-pan"><div class="tv-sec">Reposición</div>${resHtml}</section>
       <section class="tv-pan"><div class="tv-sec">Oxígeno en base</div>${o2Html}</section>
     </div>`;
   /* si las novedades no caben, desfilan solas hacia arriba */
