@@ -374,6 +374,20 @@ fieldset:disabled .xbtn{visibility:hidden}
 .accrow input{min-height:40px;padding:6px 8px}
 @media (max-width:700px){.accrow{grid-template-columns:48px minmax(0,1fr) 92px}.accrow input[data-accpin]{grid-column:1/3}}
 .jpor{display:block;font-size:12px;color:var(--ink-3)}
+.sevrow{display:flex;flex-direction:column;gap:10px}
+.sevpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sevpick .sl{font-size:14px;font-weight:600;color:var(--ink-2);margin-right:4px}
+.sevpick button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:600 15px/1 var(--f-body);cursor:pointer}
+.sevpick button i{width:14px;height:14px;border-radius:50%;flex:none}
+.sevpick button[data-sev="g"] i{background:var(--good)}.sevpick button[data-sev="y"] i{background:var(--warn)}.sevpick button[data-sev="r"] i{background:var(--crit)}
+.sevpick button[aria-pressed="true"]{color:#fff}.sevpick button[aria-pressed="true"] i{background:#fff!important}
+.sevpick button[aria-pressed="true"][data-sev="g"]{background:var(--good-ink);border-color:var(--good-ink)}
+.sevpick button[aria-pressed="true"][data-sev="y"]{background:var(--warn);border-color:var(--warn);color:var(--on-warn)}.sevpick button[aria-pressed="true"][data-sev="y"] i{background:var(--on-warn)!important}
+.sevpick button[aria-pressed="true"][data-sev="r"]{background:var(--crit);border-color:var(--crit)}
+.sevrow input:disabled{background:var(--surface-2);border-style:dashed}
+.jitem.sev-g{border-left-color:var(--good)}.jitem.sev-y{border-left-color:var(--warn)}.jitem.sev-r{border-left-color:var(--crit)}
+.jsev{display:inline-block;font:700 11px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;border-radius:999px;margin-right:8px;vertical-align:2px}
+.jsev.g{background:var(--good-soft);color:var(--good-ink)}.jsev.y{background:var(--warn-soft);color:var(--warn-ink)}.jsev.r{background:var(--crit-soft);color:var(--crit-ink)}
 .syncstate{font-size:13px;color:rgba(255,255,255,.72);white-space:nowrap}
 .syncstate[data-st="on"]{color:#9be7a8}
 .syncstate[data-st="off"]{color:#ffd58a;font-weight:600}
@@ -649,7 +663,7 @@ html.tvmode body::before{display:none}
 .tv-tag.crit{background:#d03b3b;border-color:#d03b3b}
 .tv-tag.warn{background:#fab219;border-color:#fab219;color:#1d1400}
 .tv-tag.jef{background:#fff;border-color:#fff;color:#1f2766}
-.tv-tag.nov{background:#ede914;border-color:#ede914;color:#1f2766}
+.tv-tag.nov{background:#ede914;border-color:#ede914;color:#1f2766} .tv-tag.sev-r{background:#d03b3b;border-color:#d03b3b;color:#fff} .tv-tag.sev-y{background:#fab219;border-color:#fab219;color:#1d1400} .tv-tag.sev-g{background:#1f8f3a;border-color:#1f8f3a;color:#fff}
 .tv-nt{font:500 26px/1.25 var(--f-body)}
 .tv-none{font-size:24px;color:#aab3dd;padding:14px 0}
 .tv-li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #343e8c}
@@ -858,6 +872,7 @@ function blankEntry() {
     parches: PARCHES.map(name => ({name, ent:'', rec:'', uso:''})),
     refri: {momento:'', max:'', min:'', resp:''},
     novedades: '',
+    novs: {},
     jefatura: {},
     entrega: {nombre:'', firma:null}, recibe: {nombre:'', firma:null}
   };
@@ -1177,9 +1192,11 @@ function renderForm(e) {
       <div class="gadd"><input type="text" id="genNew" placeholder="Agregar otro medicamento o insumo" aria-label="Nombre del medicamento a agregar" autocomplete="off"><button type="button" class="btn sm" data-act="addGen">Agregar</button></div>`, 'Cantidad utilizada durante el turno. Al guardar la entrega se descuenta del stock.'),
     card('s-refri', 'Temperatura refrigerador', tempBlock('refri', true), `Cadena de frío: rango ${rTxt(...tRange('refri'))}. Se cambia en Ajustes.`),
     card('s-jefatura', 'Novedades de jefatura', `<div class="jlist" id="jefList"></div>
-      <div class="gadd"><input type="text" id="jefNew" placeholder="Escribe una novedad o instrucción de la jefatura" aria-label="Nueva novedad de jefatura" autocomplete="off" maxlength="300"><button type="button" class="btn sm primary" data-act="addJef">Agregar</button></div>`, 'La jefatura las puede agregar desde su propio computador. Aparecen en todos los computadores y en el TV con la hora.'),
-    card('s-novedades', 'Novedades, incidentes u observaciones a la jefatura', `${ta('novedades', 'Detalle', 5)}
-      <div><button type="button" class="btn sm" data-act="insertAlerts">Copiar alertas del turno aquí</button></div>`),
+      <div class="sevrow">${sevPick('jef')}<div class="gadd"><input type="text" id="jefNew" placeholder="Primero elige el color" disabled aria-label="Nueva novedad de jefatura" autocomplete="off" maxlength="300"><button type="button" class="btn sm primary" data-act="addJef">Agregar</button></div></div>`, 'La jefatura las puede agregar desde su propio computador. Antes de escribir se elige el color: verde informativo, amarillo importante, rojo crítico. Aparecen en todos los computadores y en el TV con la hora, las rojas primero.'),
+    card('s-novedades', 'Novedades, incidentes u observaciones a la jefatura', `<div class="jlist" id="novList"></div>
+      <div class="sevrow">${sevPick('nov')}<div class="gadd"><input type="text" id="novNew" placeholder="Primero elige el color" disabled aria-label="Nueva novedad" autocomplete="off" maxlength="300"><button type="button" class="btn sm primary" data-act="addNov">Agregar</button></div></div>
+      <div id="novLegacy" hidden>${ta('novedades', 'Texto anterior (sin color)', 3)}</div>
+      <div><button type="button" class="btn sm" data-act="insertAlerts">Copiar alertas del turno aquí</button></div>`, 'Se agregan de a una. Antes de escribir se elige el color: verde informativo, amarillo importante, rojo crítico. En el TV salen ordenadas, las rojas primero.'),
     card('s-cierre', 'Entrega y recepción', `<div class="g-sig">
         ${['entrega','recibe'].map(k => `<div class="sigbox"><h3>${k === 'entrega' ? 'Entrega conforme' : 'Recibe conforme'}</h3>
           ${staffField(k + '.nombre', 'Nombre')}
@@ -1312,7 +1329,7 @@ function alertsOf(e, opts = {}) {
 function statusOf(id, miss, al, e) {
   if (id === 's-generales') { const n = e.generales.filter(g => (num(g.uso) || 0) > 0).length; return n ? {cls:'done', text:`${n} con uso`} : {cls:'opt', text:'Opcional'}; }
   if (id === 's-jefatura') { const n = jefItems(e).length; return n ? {cls:'done', text:`${n} novedad${n > 1 ? 'es' : ''}`} : {cls:'opt', text:'Opcional'}; }
-  if (id === 's-novedades') return filled(e.novedades) ? {cls:'done', text:'Registrado'} : {cls:'opt', text:'Opcional'};
+  if (id === 's-novedades') { const n = novItems(e).length; return n ? {cls:'done', text:`${n} novedad${n > 1 ? 'es' : ''}`} : filled(e.novedades) ? {cls:'done', text:'Registrado'} : {cls:'opt', text:'Opcional'}; }
   if (miss[id]) return {cls:'todo', text:`Faltan ${miss[id].length}`};
   return {cls:'done', text:'Completo'};
 }
@@ -1335,11 +1352,26 @@ function paintSeg(sg, v) {
 }
 const jefItems = e => Object.keys((e && e.jefatura) || {}).map(id => Object.assign({id}, e.jefatura[id])).filter(j => j && filled(j.txt)).sort((a, b) => String(a.at).localeCompare(String(b.at)));
 const jefHora = j => { const d = j.at ? new Date(j.at) : null; return d && !isNaN(d) ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : ''; };
+/* gravedad de cada novedad: g verde, y amarillo, r rojo */
+const SEV_NAME = {r:'Rojo', y:'Amarillo', g:'Verde'}, SEV_RANK = {r:0, y:1, g:2};
+const sevRank = s => SEV_RANK[s] != null ? SEV_RANK[s] : 3;
+const novItems = e => Object.keys((e && e.novs) || {}).map(id => Object.assign({id}, e.novs[id])).filter(j => j && filled(j.txt)).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+const sevPick = k => `<div class="sevpick" id="${k}Sev" role="group" aria-label="Color según gravedad"><span class="sl">Color:</span>${['g','y','r'].map(v => `<button type="button" data-act="pickSev" data-for="${k}" data-sev="${v}" aria-pressed="false"><i></i>${SEV_NAME[v]}</button>`).join('')}</div>`;
+function resetSev(k) { const box = $('#' + k + 'Sev'); if (box) { delete box.dataset.sev; box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false')); } const inp = $('#' + k + 'New'); if (inp) { inp.disabled = true; inp.placeholder = 'Primero elige el color'; } }
+const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por ? `<small class="jpor">${esc(j.por)}</small>` : ''}</span><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad">×</button></div>`;
+function renderNov() {
+  const e = cur(), box = $('#novList'); if (!box) return;
+  const items = novItems(e);
+  const html = items.length ? items.map(j => jitemHtml(j, 'delNov')).join('') : '<p class="muted">Sin novedades en este turno.</p>';
+  if (box.innerHTML !== html) box.innerHTML = html;
+  const lg = $('#novLegacy'); if (lg) lg.hidden = !filled(e.novedades);
+}
 function renderJef() {
   const box = $('#jefList'); if (!box) return;
   const items = jefItems(cur());
-  const html = items.length ? items.map(j => `<div class="jitem"><span class="jh">${jefHora(j)}</span><span class="jt">${esc(j.txt)}${j.por ? `<small class="jpor">${esc(j.por)}</small>` : ''}</span><button type="button" class="xbtn" data-act="delJef" data-id="${esc(j.id)}" aria-label="Quitar novedad">×</button></div>`).join('') : '<p class="muted">Sin novedades de jefatura en este turno.</p>';
+  const html = items.length ? items.map(j => jitemHtml(j, 'delJef')).join('') : '<p class="muted">Sin novedades de jefatura en este turno.</p>';
   if (box.innerHTML !== html) box.innerHTML = html;
+  renderNov();
 }
 function fillInputs(root = $('#fs'), skipActive) {
   const e = cur();
@@ -1854,8 +1886,10 @@ async function buildPdf(e) {
   const rst = mo == null ? 'Sin lectura' : (mo < S.rMin || mo > S.rMax) ? 'Fuera de rango' : ((mx != null && mx > S.rMax) || (mn != null && mn < S.rMin)) ? 'Excursión registrada' : 'En rango';
   sec(`Temperatura refrigerador (rango +${S.rMin} a +${S.rMax} °C)`, {head:[['T° momento', 'T° máxima', 'T° mínima', 'Responsable', 'Estado']], body:cl([[mo != null ? fmtT(mo) + ' °C' : '', mx != null ? fmtT(mx) + ' °C' : '', mn != null ? fmtT(mn) + ' °C' : '', r.resp, rst]])});
   const jefs = jefItems(e);
-  if (jefs.length) sec('Novedades de jefatura', {body:cl(jefs.map(j => [jefHora(j), j.txt])), columnStyles:{0:Object.assign({cellWidth:18}, bold)}});
-  sec('Novedades, incidentes u observaciones a la jefatura', {body:cl([[filled(e.novedades) ? e.novedades : 'Sin novedades registradas']])});
+  if (jefs.length) sec('Novedades de jefatura', {body:cl(jefs.map(j => [jefHora(j), SEV_NAME[j.sev] || '', j.txt])), columnStyles:{0:Object.assign({cellWidth:18}, bold), 1:Object.assign({cellWidth:24}, bold)}});
+  const novs = novItems(e);
+  if (novs.length) sec('Novedades, incidentes u observaciones a la jefatura', {body:cl(novs.map(j => [jefHora(j), SEV_NAME[j.sev] || '', j.txt])).concat(filled(e.novedades) ? [[{content:pdfTxt('Texto anterior: ' + e.novedades), colSpan:3}]] : []), columnStyles:{0:Object.assign({cellWidth:18}, bold), 1:Object.assign({cellWidth:24}, bold)}});
+  else sec('Novedades, incidentes u observaciones a la jefatura', {body:cl([[filled(e.novedades) ? e.novedades : 'Sin novedades registradas']])});
   const al = alertsOf(e);
   if (al.length) sec('Alertas registradas', {body:cl(al.map(a => [a.sev === 'crit' ? 'Crítica' : a.sev === 'warn' ? 'Aviso' : 'Info', a.text])), columnStyles:{0:Object.assign({cellWidth:18}, bold)}});
   sec('Entrega y recepción', {body:cl([['Entrega conforme', e.entrega.nombre, 'Recibe conforme', e.recibe.nombre]]), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
@@ -2155,10 +2189,31 @@ const actions = {
   delGen(a) { cur().generales.splice(+a.dataset.i, 1); rerenderGen(); changed(); },
   clearSig(a) { set(cur(), a.dataset.path, null); redrawSigs(); changed(); },
   insertAlerts() {
-    const al = alertsOf(cur()); if (!al.length) { toast('No hay alertas para copiar'); return; }
-    const txt = al.map(x => '• ' + x.text).join('\n');
-    const e = cur(); e.novedades = (filled(e.novedades) ? e.novedades.replace(/\s+$/, '') + '\n' : '') + txt;
-    $('#' + fid('novedades')).value = e.novedades; changed(); toast(`${al.length} alertas copiadas a novedades`);
+    if (isRO()) return;
+    const e = cur(); if (!e.novs) e.novs = {};
+    const have = new Set(novItems(e).map(j => j.txt));
+    const al = alertsOf(e).filter(x => !have.has(x.text)); if (!al.length) { toast('No hay alertas nuevas para copiar'); return; }
+    const at = new Date().toISOString();
+    al.forEach(x => { e.novs[uid()] = {at, txt:x.text, sev:x.sev === 'crit' ? 'r' : x.sev === 'warn' ? 'y' : 'g', por:'Alerta automática'}; });
+    changed(); toast(`${al.length} alertas copiadas a novedades`);
+  },
+  pickSev(a) {
+    const k = a.dataset.for, box = $('#' + k + 'Sev'); if (!box) return;
+    box.dataset.sev = a.dataset.sev;
+    box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === a ? 'true' : 'false'));
+    const inp = $('#' + k + 'New'); if (inp) { inp.disabled = false; inp.placeholder = k === 'jef' ? 'Escribe la novedad o instrucción de la jefatura' : 'Escribe la novedad'; inp.focus(); }
+  },
+  addNov() {
+    if (isRO()) return;
+    const sev = ($('#novSev') || {dataset:{}}).dataset.sev; if (!SEV_NAME[sev]) { toast('Primero elige el color: verde, amarillo o rojo'); return; }
+    const inp = $('#novNew'), txt = (inp.value || '').trim(); if (!txt) { inp.focus(); return; }
+    const e = cur(); if (!e.novs) e.novs = {};
+    e.novs[uid()] = {at:new Date().toISOString(), txt, sev, por:sesLabel()};
+    inp.value = ''; resetSev('nov'); changed(); toast('Novedad agregada');
+  },
+  delNov(a) {
+    if (isRO() || !armed(a, '¿Quitar?')) return;
+    delete cur().novs[a.dataset.id]; changed();
   },
   mPrev(a) { const k = a.dataset.k; let {y, m} = chartMonths[k]; m--; if (m < 0) { m = 11; y--; } chartMonths[k] = {y, m}; renderChart(k); },
   mNext(a) { const k = a.dataset.k; let {y, m} = chartMonths[k]; m++; if (m > 11) { m = 0; y++; } chartMonths[k] = {y, m}; renderChart(k); },
@@ -2229,10 +2284,11 @@ const actions = {
   pdfCur() { return actions.pdfOne(); },
   addJef() {
     if (isRO()) return;
+    const sev = ($('#jefSev') || {dataset:{}}).dataset.sev; if (!SEV_NAME[sev]) { toast('Primero elige el color: verde, amarillo o rojo'); return; }
     const inp = $('#jefNew'), txt = (inp.value || '').trim(); if (!txt) { inp.focus(); return; }
     const e = cur(); if (!e.jefatura) e.jefatura = {};
-    e.jefatura[uid()] = {at:new Date().toISOString(), txt, por:sesLabel()};
-    inp.value = ''; changed(); toast('Novedad de jefatura agregada');
+    e.jefatura[uid()] = {at:new Date().toISOString(), txt, sev, por:sesLabel()};
+    inp.value = ''; resetSev('jef'); changed(); toast('Novedad de jefatura agregada');
   },
   delJef(a) {
     if (isRO() || !armed(a, '¿Quitar?')) return;
@@ -2721,6 +2777,7 @@ document.addEventListener('change', ev => {
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && $('#sheetHost').innerHTML) closeSheet();
   if (ev.key === 'Enter' && ev.target.id === 'genNew') { ev.preventDefault(); actions.addGen(); }
+  if (ev.key === 'Enter' && ev.target.id === 'novNew') { ev.preventDefault(); actions.addNov(); }
   if (ev.key === 'Enter' && ev.target.id === 'jefNew') { ev.preventDefault(); actions.addJef(); }
   if (ev.key === 'Enter' && ['pinIn', 'pinNew2', 'pinMaster'].includes(ev.target.id)) { ev.preventDefault(); const b = document.querySelector('#sheetHost [data-act="pinEnter"], #sheetHost [data-act="pinSave"], #sheetHost [data-act="pinReset"]'); if (b) b.click(); }
 });
@@ -3229,11 +3286,16 @@ function tvRender() {
   }).join('');
   const operativos = e.moviles.filter(m => filled(m.id) && ['r','pm','c'].every(k => crewOk(m, k))).length;
 
-  const jef = jefItems(e).map(j => `<div class="tv-nv"><span class="tv-tag jef">Jefatura${jefHora(j) ? ' ' + jefHora(j) : ''}</span><span class="tv-nt">${esc(j.txt)}</span></div>`);
-  const nov = String(e.novedades || '').split('\n').map(t => t.replace(/^[\s•\-–]+/, '').trim()).filter(Boolean)
-    .map(t => `<div class="tv-nv"><span class="tv-tag nov">Novedad</span><span class="tv-nt">${esc(t)}</span></div>`);
-  const al = alertsOf(e).map(a => `<div class="tv-nv"><span class="tv-tag ${a.sev}">${esc(TV_TAG[a.sec] || secName(a.sec))}</span><span class="tv-nt">${esc(a.text)}</span></div>`);
-  const items = jef.concat(nov, al);
+  /* novedades ordenadas por gravedad (rojo, amarillo, verde); de los avisos automáticos solo los críticos, sin radios ni oxígeno */
+  const TV_SKIP = new Set(['s-radios', 's-oxigeno', 's-moviles']);
+  const nvRow = (cls, tag, txt) => `<div class="tv-nv"><span class="tv-tag ${cls}">${esc(tag)}</span><span class="tv-nt">${esc(txt)}</span></div>`;
+  const rows = [];
+  jefItems(e).forEach(j => rows.push({k:sevRank(j.sev), at:String(j.at || ''), html:nvRow(SEV_NAME[j.sev] ? 'sev-' + j.sev : 'jef', 'Jefatura' + (jefHora(j) ? ' ' + jefHora(j) : ''), j.txt)}));
+  novItems(e).forEach(j => rows.push({k:sevRank(j.sev), at:String(j.at || ''), html:nvRow(SEV_NAME[j.sev] ? 'sev-' + j.sev : '', 'Novedad' + (jefHora(j) ? ' ' + jefHora(j) : ''), j.txt)}));
+  String(e.novedades || '').split('\n').map(t => t.replace(/^[\s•\-–]+/, '').trim()).filter(Boolean).forEach(t => rows.push({k:3, at:'~', html:nvRow('', 'Novedad', t)}));
+  alertsOf(e).filter(a => a.sev === 'crit' && !TV_SKIP.has(a.sec)).forEach(a => rows.push({k:0, at:'~', html:nvRow('sev-r', TV_TAG[a.sec] || secName(a.sec), a.text)}));
+  rows.sort((a, b) => a.k - b.k || (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  const items = rows.map(r => r.html);
 
   const temps = ['refri','bodega','salaeq'].map(k => {
     const v = tVals(e, k), st = tState(e, k), [a, b] = tRange(k);
