@@ -1161,7 +1161,7 @@ function renderForm(e) {
       <div class="rt" id="resBox"></div>`, 'Anota las 3 radios al lado de cada móvil. En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
     `<div class="duo">` +
     card('s-estadistica', 'Estadística', `<div class="ynlist">${yn('est.siniestros', 'Siniestros durante el turno', 'SI')}${yn('est.faf', 'Notificación FAF', '')}</div>`) +
-    card('s-extricacion', 'Material de extricación', `${staffField('extr.encargado', 'Encargado')}
+    card('s-extricacion', 'Material de extricación', `${staffField('extr.encargado', 'Encargado (PM)', 'PM')}
       <div class="ynlist">
         <div class="ynblock">${yn('extr.guardar', 'Pendiente guardar', 'SI')}${cond('extr.guardar', 'SI', inp('extr.guardarLugar', 'Lugar'))}</div>
         <div class="ynblock">${yn('extr.rescatar', 'Pendiente por rescatar', 'SI')}${cond('extr.rescatar', 'SI', inp('extr.rescatarLugar', 'Lugar'))}</div>
