@@ -768,7 +768,10 @@ const GENERALES = ['Aspirina 500 mg','Amiodarona','Adenosina','Atropina','Betame
 /* Stock mueble de fármacos (columna STOCK de la planilla) */
 const STOCK_INICIAL = {'Aspirina 500 mg':10,'Amiodarona':20,'Adenosina':20,'Atropina':20,'Betametasona':30,'Captopril':10,'Clorfenamina':30,'Epinefrina':30,'Flumazenil':10,'Furosemida':20,'Hidrocortisona 100 mg':30,'Berodual':5,'Ketorolaco':30,'Ác. tranexámico':10,'Naloxona':10,'Ondansetrón':20,'Quikclot Combat':6,'Celox-A jeringa':6,'Celox-A granulado':6,'Spongostan':6,'Hyfin Vent (parche 3 puntas)':5,'Parche Zoll adulto':3,'Parche Zoll pediátrico':1,'Parche DEA Zoll':1,'Parche DEA Mindray':1,'Parche Corpuls adulto':1,'Parche Corpuls pediátrico':1};
 /* Móviles (planilla Entrega de turno conductores) */
-const FLOTA_INICIAL = ['90','91','92','89','76','79','68','69'].map(n => ({marca:'M.Benz', num:n, patente:''}));
+const FLOTA_INICIAL = ['90','91','92','89','76','79','68','69','19'].map(n => ({marca:'M.Benz', num:n, patente:''}));
+/* móviles que deben estar siempre en la lista (se agregan si faltan, también en los datos que vienen de Google) */
+const FLOTA_FIJA = ['19'];
+function ensureFlota() { const F = store.settings.flota; if (!Array.isArray(F)) return; FLOTA_FIJA.forEach(n => { if (!F.some(f => String(f.num).trim() === n)) F.push({marca:'M.Benz', num:n, patente:''}); }); }
 /* Personal SAMU Punta Arenas (* = suplente) */
 const PERSONAL_TXT = ''; /* la nómina llega desde Google después de entrar con clave */
 const PERSONAL_INICIAL = PERSONAL_TXT.trim().split('\n').filter(Boolean).map(l => { const [c, n] = l.split('|'); return {clave:c.replace('*', ''), nombre:n.trim(), sup:c.endsWith('*')}; });
@@ -990,7 +993,7 @@ function load() {
   store.history = store.history.filter(h => !h.ejemplo);
   if (raw && store.history.length !== nHist) setTimeout(persist, 0);
   if (!store.draft) store.draft = blankEntry();
-  ensureStock();
+  ensureStock(); ensureFlota();
   sortHistory();
   if (ok) {
     try {
@@ -2527,6 +2530,13 @@ const actions = {
     store.settings.pin = pinHash(a); persist(); pinFails = 0; pinLockUntil = 0;
     toast('Clave de Ajustes y Stock guardada'); openPinTarget();
   },
+  draftWipe(a) {
+    if (!(SES && SES.admin)) { toast('Solo el administrador puede borrar la entrega en curso'); return; }
+    if (!armed(a, 'Confirmar: borrar entrega en curso')) return;
+    store.draft = blankEntry(); view = {mode:'draft', id:null};
+    persist(); closeSheet(); renderAll(); window.scrollTo({top:0, behavior:'auto'});
+    toast('Entrega en curso borrada en todos los computadores');
+  },
   numReset(a) {
     const n = store.history.filter(h => !h.ejemplo).length;
     if (!armed(a, n ? `Hay ${n} entregas guardadas: confirmar reinicio` : 'Confirmar reinicio')) return;
@@ -2549,7 +2559,7 @@ const actions = {
         <label class="fld" for="setCrit"><span class="lbl">Alerta roja de stock (% que queda)</span><input type="text" inputmode="numeric" id="setCrit" value="${critPct()}"></label>
       </div>
       <p class="muted">Usa el Nº para seguir la numeración del talonario en papel.</p>
-      <div class="srow"><button type="button" class="btn sm" data-act="numReset">Reiniciar numeración (próxima: Nº 000001)</button></div>
+      <div class="srow"><button type="button" class="btn sm" data-act="numReset">Reiniciar numeración (próxima: Nº 000001)</button>${SES && SES.admin ? '<button type="button" class="btn sm danger" data-act="draftWipe" title="Deja en blanco la entrega en curso, en todos los computadores y en el TV">Borrar todo (entrega en curso)</button>' : ''}</div>
       <div class="sheet-act" style="justify-content:flex-start"><button type="button" class="btn primary" data-act="saveSettings">Guardar ajustes</button></div>
       <h3>Clave de Ajustes y Stock</h3>
       <div class="srow"><p style="flex:1">Ajustes, Stock y el recuento semanal están protegidos con una clave de 4 dígitos.</p><button type="button" class="btn sm" data-act="pinChange">Cambiar clave</button></div>
@@ -3131,7 +3141,7 @@ function syncMeta(save) {
 function adoptSync(next) {
   const L = next.live || {};
   if (L.draft) store.draft = migrateDraft(normalize(clone(L.draft)));
-  if (L.settings) Object.assign(store.settings, clone(L.settings));
+  if (L.settings) { Object.assign(store.settings, clone(L.settings)); ensureFlota(); }
   if (L.stock) store.stock = clone(L.stock);
   if (Array.isArray(L.recuentos)) store.recuentos = clone(L.recuentos);
   store.history = Object.values(next.hist || {}).filter(h => h && !h._del).map(h => normalize(clone(h)));
@@ -3226,7 +3236,7 @@ async function tvPull() {
     (r.hist || []).forEach(h => { if (h._del) delete TVSY.hist[h.id]; else TVSY.hist[h.id] = h; });
     TVSY.rev = r.rev;
     const L = TVSY.live; if (!L) return false;
-    if (L.settings) Object.assign(store.settings, clone(L.settings));
+    if (L.settings) { Object.assign(store.settings, clone(L.settings)); ensureFlota(); }
     store.draft = L.draft ? migrateDraft(normalize(clone(L.draft))) : blankEntry();
     if (L.stock) store.stock = clone(L.stock);
     store.history = Object.values(TVSY.hist).map(h => normalize(clone(h)));
