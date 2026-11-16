@@ -698,13 +698,14 @@ html.tvmode body::before{display:none}
 .tv-pan[data-tg="nov"]{--tg:#f2c230}.tv-pan[data-tg="res"]{--tg:#6f97ff}.tv-pan[data-tg="o2"]{--tg:#4cc884}
 .tv-card:not(.empty){border-top:6px solid #6f97ff}
 .tv-amb{display:flex;flex-direction:column;align-items:center;margin:-6px 0 4px}
-.tv-amb .tv-ch{width:100%;margin-bottom:2px}
-.tv-amb img{display:block;width:46%;height:auto;margin-top:0;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
+.tv-amb .tv-ch{width:100%;margin-bottom:0}.tv-amb .tv-ch b{font-size:40px}.tv-amb .tv-pill{font-size:18px;padding:6px 12px}
+.tv-amb img{display:block;width:34%;height:auto;margin-top:-4px;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
 .tv-card.empty .tv-amb img{filter:grayscale(1)}
 .tv-roles{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;row-gap:6px;align-items:baseline;margin-top:6px}
 .tv-roles .tv-rl{grid-column:1;margin-top:0;font-size:16px}
-.tv-roles .tv-rv{grid-column:2;margin-top:0;font-size:28px;text-align:right}
-.tv-roles .tv-rv.sp{justify-content:flex-end}
+.tv-roles .tv-rv{grid-column:2;margin-top:0;font-size:28px;text-align:left}
+.tv-roles .tv-rv.sp{justify-content:flex-start}
+.tv-sl{font-style:normal;color:#ede914;font-weight:700}
 .tv-movsec{color:#8fb0ff!important}
 .tv-pan .tv-sec{margin:0 0 12px}
 .tv-win{flex:1;min-height:0;overflow:hidden;position:relative}
@@ -3377,7 +3378,7 @@ function tvRender() {
   const one = v => filled(v) ? esc(tvShort(v)) : 'Por asignar';
   const role = (lbl, m, k) => {
     const segs = String(m[k] || '').split('/').map(x => x.trim()).filter(Boolean);
-    if (segs.length > 1) return `<div class="tv-rl">${lbl}</div>${segs.map((x, j) => `<div class="tv-rv sp">${j ? '<i>/</i>' : ''}${esc(tvShort(x))}</div>`).join('')}`;
+    if (segs.length > 1) return `<div class="tv-rl">${lbl}</div><div class="tv-rv">${segs.map(x => esc(tvShort(x))).join(' <i class="tv-sl">/</i> ')}</div>`;
     if (!isSplit(m, k)) return `<div class="tv-rl">${lbl}</div><div class="tv-rv${filled(m[k]) ? '' : ' miss'}">${one(m[k])}</div>`;
     const [ini, fin] = turnoHoras(e), h = splitHora(e, m, k), cm = toM(h);
     /* quién está ahora: en turno noche el cambio cruza la medianoche */
