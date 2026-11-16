@@ -374,6 +374,8 @@ fieldset:disabled .xbtn{visibility:hidden}
 .accrow input{min-height:40px;padding:6px 8px}
 @media (max-width:700px){.accrow{grid-template-columns:48px minmax(0,1fr) 92px}.accrow input[data-accpin]{grid-column:1/3}}
 .jpor{display:block;font-size:12px;color:var(--ink-3)}
+.mvb{display:inline-block;margin-left:6px;padding:3px 8px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);font:700 11px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;vertical-align:2px}
+.tv-bas{font:600 15px var(--f-body);color:#aab3dd;letter-spacing:.04em;text-transform:uppercase;margin-left:4px}
 .sevrow{display:flex;flex-direction:column;gap:10px}
 .sevpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .sevpick .sl{font-size:14px;font-weight:600;color:var(--ink-2);margin-right:4px}
@@ -726,6 +728,7 @@ html.tvmode body::before{display:none}
         <button class="btn ghost" type="button" data-act="stock">Stock</button>
         <button class="btn ghost" type="button" data-act="history">Historial</button>
         <button class="btn ghost" type="button" data-act="tvOpen" title="Abre la pantalla para el TV en otra ventana">Pantalla TV</button>
+        <button class="btn ghost" type="button" data-act="charts" title="Gráficos de temperatura de bodega diaria, sala de equipos y refrigerador">Gráficos</button>
         <button class="btn ghost" type="button" data-act="settings">Ajustes</button>
         <button class="btn primary" type="button" data-act="save" id="topSave">Guardar entrega</button>
       </div>
@@ -772,6 +775,11 @@ const ROL_NAME = {R:'Reanimadores', PM:'Paramédicos', C:'Conductores', O:'Otros
 const PARCHES = ['Parche Zoll adulto','Parche Zoll pediátrico','Parche DEA Zoll','Parche DEA Mindray','Parche Corpuls adulto','Parche Corpuls pediátrico'];
 const EQUIPOS = [['monitores','Monitores desfibriladores'],['vm','VM (ventiladores mecánicos)'],['aspiracion','Bombas de aspiración'],['multiparametros','Multiparámetros'],['dea','DEA'],['infusion','Bombas de infusión'],['carboxi','Sensor de carboxihemoglobina'],['gases','Sensor de gases'],['videolaringo','Video laringoscopio']];
 const ROLES = [['r','R','Reanimador'],['pm','PM','Paramédico'],['c','C','Conductor']];
+/* el móvil 4 es básico: solo paramédico y conductor, sin reanimador */
+const BASICO = 3;
+const movRoles = i => i === BASICO ? ROLES.filter(([k]) => k !== 'r') : ROLES;
+const movKeys = i => movRoles(i).map(r => r[0]);
+const movRadios = i => movRoles(i).length;
 const CREW_KEYS = ['id','r','pm','c','r2','pm2','c2'];
 /* turno dividido: m.r = primer tramo, m.r2 = segundo tramo, m.rH = hora del cambio */
 const TURNO_HRS = {Largo:['08:00','20:00','14:00'], Noche:['20:00','08:00','02:00']};
@@ -789,7 +797,7 @@ function crewTxt(e, m, k) {
 }
 function crewRows(i, e) {
   const p = `moviles.${i}`;
-  return ROLES.map(([k, c, n]) => `<div class="crew"><label class="role" for="${fid(p+'.'+k)}" title="${n}">${c}</label>${cbx(`${p}.${k}`, c, n, true)}<button type="button" class="splitbtn" data-act="crewAdd" data-i="${i}" data-k="${k}" title="Agregar otro funcionario al mismo rol (turno compartido)" aria-label="Agregar otro ${n}">+</button><small class="crewfull" data-full="${p}.${k}" hidden></small></div>`).join('');
+  return movRoles(i).map(([k, c, n]) => `<div class="crew"><label class="role" for="${fid(p+'.'+k)}" title="${n}">${c}</label>${cbx(`${p}.${k}`, c, n, true)}<button type="button" class="splitbtn" data-act="crewAdd" data-i="${i}" data-k="${k}" title="Agregar otro funcionario al mismo rol (turno compartido)" aria-label="Agregar otro ${n}">+</button><small class="crewfull" data-full="${p}.${k}" hidden></small></div>`).join('');
 }
 function rerenderMovil(i) {
   const el = $(`[data-movil="${i}"]`); if (!el) return;
@@ -1040,7 +1048,7 @@ function movilOptions(v) {
 }
 function movilCard(i, e) {
   const p = `moviles.${i}`;
-  return `<div class="mv" data-movil="${i}"><div class="mv-h"><strong>Móvil ${i+1}</strong><span class="rin" role="group" aria-label="Radios a cargo del móvil ${i+1}"><span class="rlbl">Radios</span>${[0,1,2].map(k => `<input type="text" inputmode="numeric" data-num="int" id="${fid(p+'.radios.'+k)}" data-bind="${p}.radios.${k}" data-radio="${i}.${k}" aria-label="Radio ${k+1} del móvil ${i+1}" autocomplete="off">`).join('')}</span></div>
+  return `<div class="mv" data-movil="${i}"><div class="mv-h"><strong>Móvil ${i+1}${i === BASICO ? ' <span class="mvb">Básico</span>' : ''}</strong><span class="rin" role="group" aria-label="Radios a cargo del móvil ${i+1}"><span class="rlbl">Radios</span>${[0,1,2].map(k => `<input type="text" inputmode="numeric" data-num="int" id="${fid(p+'.radios.'+k)}" data-bind="${p}.radios.${k}" data-radio="${i}.${k}" aria-label="Radio ${k+1} del móvil ${i+1}" autocomplete="off">`).join('')}</span></div>
     <div class="fld"><div class="lblrow"><label class="lbl" for="${fid(p+'.id')}">Móvil</label><span class="mv-st"></span></div><select id="${fid(p+'.id')}" data-bind="${p}.id">${movilOptions(e.moviles[i].id)}</select></div>
     ${crewRows(i, e)}
   </div>`;
@@ -1217,9 +1225,9 @@ function sectionMissing(e) {
   e.moviles.forEach((mv, i) => {
     if (!crewAny(mv)) return;
     anyMovil = true;
-    const miss = ROLES.filter(([k]) => !crewOk(mv, k)).map(([k, c]) => filled(mv[k]) ? `${c} del 2º tramo` : c);
+    const miss = movRoles(i).filter(([k]) => !crewOk(mv, k)).map(([k, c]) => filled(mv[k]) ? `${c} del 2º tramo` : c);
     if (!filled(mv.id)) miss.unshift('elegir móvil');
-    const nr = 3 - mv.radios.filter(filled).length;
+    const nr = movRadios(i) - mv.radios.filter(filled).length;
     if (nr > 0) miss.push(`${nr} radio${nr > 1 ? 's' : ''}`);
     if (miss.length) need('s-moviles', false, `Móvil ${i+1}: falta ${miss.join(', ')}`);
   });
@@ -1430,8 +1438,8 @@ function refresh() {
   e.moviles.forEach((m, i) => {
     const el = $(`[data-movil="${i}"]`); if (!el) return;
     const any = crewAny(m);
-    const miss2 = ROLES.filter(([k]) => !crewOk(m, k)).map(([k, c]) => filled(m[k]) ? `${c} 2º tramo` : c);
-    const nr = 3 - m.radios.filter(filled).length;
+    const miss2 = movRoles(i).filter(([k]) => !crewOk(m, k)).map(([k, c]) => filled(m[k]) ? `${c} 2º tramo` : c);
+    const nr = movRadios(i) - m.radios.filter(filled).length;
     if (nr > 0) miss2.push(`${nr} radio${nr > 1 ? 's' : ''}`);
     if (!filled(m.id)) miss2.unshift('móvil');
     const st = !any ? 'empty' : miss2.length ? 'part' : 'done';
@@ -1488,7 +1496,7 @@ function renderRadMov(e) {
   const rows = e.moviles.map((m, i) => {
     const rs = m.radios.filter(filled);
     if (!filled(m.id) && !rs.length) return '';
-    return `<div class="rm"><b>${esc(movName(e, i))}</b><span class="rchips">${rs.length ? rs.map(r => `<span class="rchip${(own[rkey(r)] || []).length > 1 ? ' dup' : ''}">${esc(r)}</span>`).join('') : '<span class="muted">Sin radios asignadas</span>'}${rs.length && rs.length < 3 ? `<span class="muted">faltan ${3 - rs.length}</span>` : ''}</span></div>`;
+    return `<div class="rm"><b>${esc(movName(e, i))}</b><span class="rchips">${rs.length ? rs.map(r => `<span class="rchip${(own[rkey(r)] || []).length > 1 ? ' dup' : ''}">${esc(r)}</span>`).join('') : '<span class="muted">Sin radios asignadas</span>'}${rs.length && rs.length < movRadios(i) ? `<span class="muted">faltan ${movRadios(i) - rs.length}</span>` : ''}</span></div>`;
   }).join('');
   const libres = []; for (let n = 1; n <= N; n++) if (!own[n]) libres.push(n);
   box.innerHTML = (rows || '<div class="rm"><span class="muted" style="grid-column:1/-1">Aún no hay radios asignadas. Se anotan al lado de cada móvil, en Móviles y tripulación.</span></div>') +
@@ -1548,8 +1556,10 @@ function tPdf(e, k) {
 function tempBlock(k, withResp) {
   const c = TEMPS[k], p = c.base;
   return `<div class="tgrid${withResp ? '' : ' t3'}">${tbox(`${p}.${c.mo}`, 'T° momento')}${tbox(`${p}.${c.mx}`, 'T° máxima')}${tbox(`${p}.${c.mn}`, 'T° mínima')}${withResp ? staffField('refri.resp', 'Responsable') : ''}</div>
-      <div class="tstatus" id="tStatus-${k}" role="status"></div>
-      <div class="chartbox">
+      <div class="tstatus" id="tStatus-${k}" role="status"></div>`;
+}
+function chartBox(k) {
+  return `<div class="chartbox">
         <div class="chart-h">
           <button type="button" class="mbtn" data-act="mPrev" data-k="${k}" aria-label="Mes anterior">‹</button>
           <strong id="mLabel-${k}"></strong>
@@ -1566,7 +1576,7 @@ function tempBlock(k, withResp) {
           <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="var(--crit)"/></svg>Fuera de rango</span>
         </div>
         <div class="ttable-wrap" id="tTable-${k}" hidden></div>
-      </div>`;
+      </div>`
 }
 function paintTemp(e, k) {
   const c = TEMPS[k], [a, b] = tRange(k), v = tVals(e, k), p = c.base;
@@ -1593,8 +1603,8 @@ function renderOverview(e, miss, al) {
   const ctrlDiff = e.controlados.filter(c => { const a = num(c.ent), b = num(c.rec); return a != null && b != null && a !== b; }).length;
   const ctrlCount = e.controlados.filter(c => filled(c.ent) && filled(c.rec)).length;
   const mo = num(e.refri.momento), mx = num(e.refri.max), mn = num(e.refri.min);
-  const movOk = e.moviles.filter(m => ROLES.every(([k]) => crewOk(m, k))).length;
-  const movPart = e.moviles.filter(m => crewAny(m) && !ROLES.every(([k]) => crewOk(m, k))).length;
+  const movOk = e.moviles.filter((m, i) => movRoles(i).every(([k]) => crewOk(m, k))).length;
+  const movPart = e.moviles.filter((m, i) => crewAny(m) && !movRoles(i).every(([k]) => crewOk(m, k))).length;
 
   const chip = (k, v, s, st = '') => `<div class="chip" data-st="${st}"><span class="k">${k}</span><span class="v">${v}</span><span class="s">${s}</span></div>`;
   let refriS = 'Sin lectura', refriSt = '';
@@ -1859,8 +1869,8 @@ async function buildPdf(e) {
   };
   const yn2 = v => v || '-', bold = {fontStyle:'bold'};
   sec('Turno', {body:cl([['Turno', e.turno, 'Fecha y hora', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante]]), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
-  const movs = e.moviles.filter(crewAny);
-  sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
+  const movs = e.moviles.map((m, i) => Object.assign({}, m, {_b:i === BASICO})).filter(crewAny);
+  sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
   const x = e.extr, b = e.bodega, sq = e.salaeq;
   sec('Revisión de áreas', {head:[['Área', 'Encargado', 'Detalle']], body:cl([
     ['Estadística', e.est.encargado, `Siniestros durante el turno: ${yn2(e.est.siniestros)}\nNotificación FAF: ${yn2(e.est.faf)}`],
@@ -2315,6 +2325,16 @@ const actions = {
   },
   closeSheet() { closeSheet(); },
   scrim(a, ev) { if (ev.target === a) closeSheet(); },
+  charts() {
+    const e = cur();
+    Object.keys(TEMPS).forEach(k => { if (!chartMonths[k]) { const d = parseLocal(e.fecha) || new Date(); chartMonths[k] = {y:d.getFullYear(), m:d.getMonth()}; } });
+    openSheet(`<h2>Gráficos de temperatura</h2>
+      <p class="muted">Una lectura por entrega guardada. Con ‹ y › cambias de mes; «Ver tabla» muestra los valores.</p>
+      ${['bodega', 'salaeq', 'refri'].map(k => `<h3>${TEMPS[k].name}</h3>${chartBox(k)}`).join('')}
+      <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>`, 'wide');
+    Object.keys(TEMPS).forEach(k => { const kr = document.getElementById(`keyRange-${k}`), [a, b] = tRange(k); if (kr) kr.textContent = `Rango ${rTxt(a, b)}`; });
+    requestAnimationFrame(renderCharts);
+  },
   history() {
     const H = store.history;
     openSheet(`<h2>Historial de entregas</h2>
@@ -2353,7 +2373,7 @@ const actions = {
         if (tv) { w.moveTo(tv.availLeft, tv.availTop); w.resizeTo(tv.availWidth, tv.availHeight); moved = true; }
       }
     } catch (e) {}
-    toast(moved ? 'Pantalla TV abierta en el televisor. Toca «Pantalla completa» en el TV.' : 'Pantalla TV abierta. Llévala al televisor y toca «Pantalla completa».');
+    toast(moved ? 'Pantalla TV abierta en el televisor. Doble clic en el TV para pantalla completa.' : 'Pantalla TV abierta. Llévala al televisor y haz doble clic para pantalla completa.');
   },
   stock() {
     if (!settingsUnlocked()) { pinSheet(store.settings.pin ? 'enter' : 'create', 'stock'); return; }
@@ -3277,14 +3297,14 @@ function tvRender() {
   };
   const cards = e.moviles.map((m, i) => {
     const any = crewAny(m);
-    const full = filled(m.id) && ['r','pm','c'].every(k => crewOk(m, k));
+    const full = filled(m.id) && movKeys(i).every(k => crewOk(m, k));
     const pill = !any ? '<span class="tv-pill">Sin asignar</span>' : full ? '<span class="tv-pill ok">Operativo</span>' : '<span class="tv-pill warn">Incompleto</span>';
     const rs = m.radios.filter(filled);
     return `<div class="tv-card${any ? '' : ' empty'}"><div class="tv-ch"><b>${esc(tvMovName(m, i))}</b>${pill}</div>
-      ${role('Reanimador', m, 'r')}${role('Paramédico', m, 'pm')}${role('Conductor', m, 'c')}
+      ${i === BASICO ? '<div class="tv-rl">Tipo</div><div class="tv-rv">Móvil básico</div>' : role('Reanimador', m, 'r')}${role('Paramédico', m, 'pm')}${role('Conductor', m, 'c')}
       <div class="tv-rad"><span>Radios</span><b>${rs.length ? rs.map(esc).join(' · ') : '—'}</b></div></div>`;
   }).join('');
-  const operativos = e.moviles.filter(m => filled(m.id) && ['r','pm','c'].every(k => crewOk(m, k))).length;
+  const operativos = e.moviles.filter((m, i) => filled(m.id) && movKeys(i).every(k => crewOk(m, k))).length;
 
   /* novedades ordenadas por gravedad (rojo, amarillo, verde); de los avisos automáticos solo los críticos, sin radios ni oxígeno */
   const TV_SKIP = new Set(['s-radios', 's-oxigeno', 's-moviles']);
@@ -3358,12 +3378,9 @@ function startTV() {
   document.getElementById('app').hidden = true;
   const host = document.createElement('div');
   host.id = 'tv'; host.innerHTML = '<div class="tvs" id="tvStage"></div><div class="tv-hint" id="tvHint"></div>'
-    + '<div class="tv-go" id="tvGo"><div class="tv-go-card"><b>Pantalla TV</b>'
-    + '<div class="tv-act" id="tvAct"><span>Primera vez en este equipo: la jefatura (MJ o SA) o el administrador activa la pantalla con su código y clave. Queda activada por un año.</span>'
-    + '<div class="tv-act-f"><input id="tvCode" placeholder="Código" autocapitalize="characters" autocomplete="off"><input id="tvPin" type="password" inputmode="numeric" placeholder="Clave" autocomplete="off"></div><small id="tvActErr"></small><button type="button" class="tv-local" id="tvLocal">Seguir sin activar (solo datos de este computador)</button></div>'
-    + '<span>Toca el botón para dejarla en pantalla completa y siempre encendida.</span><button type="button" id="tvGoBtn">Pantalla completa</button><small>Doble clic en cualquier parte también activa o sale de pantalla completa.</small></div></div>'
     + '<button type="button" class="tv-fsbtn" id="tvFsBtn" hidden>⛶ Pantalla completa</button>';
   document.body.appendChild(host);
+  loadSes(); /* si en este computador hay alguien con sesión, el TV usa ese permiso para leer de Google */
   tvLoad(); if (!store.draft) store.draft = blankEntry(); ensureStock(); tvRender(); tvFit();
   window.addEventListener('resize', tvFit);
   window.addEventListener('storage', ev => { if (ev.key === LS_KEY && tvLoad()) tvRender(); });
@@ -3389,19 +3406,10 @@ function startTV() {
   const enterFs = async () => { try { await document.documentElement.requestFullscreen({navigationUI:'hide'}); } catch (e) {} awake(); paintFs(); };
   const paintFs = () => {
     const fs = isFs();
-    const actPend = !tvToken() && !testToken() && !TV_LOCAL;
-    document.getElementById('tvGo').hidden = !actPend && (fs || TV_GO_DONE);
-    document.getElementById('tvFsBtn').hidden = fs || !TV_GO_DONE;
+    document.getElementById('tvFsBtn').hidden = fs;
     document.getElementById('tvHint').textContent = (wl ? '● Pantalla siempre encendida' : 'La pantalla podría apagarse: toca la pantalla una vez') + (fs ? ' · Doble clic para salir de pantalla completa' : ' · Doble clic para pantalla completa');
   };
-  let TV_GO_DONE = kiosk(), TV_LOCAL = false;
-  document.getElementById('tvLocal').addEventListener('click', ev => { ev.stopPropagation(); TV_LOCAL = true; TV_GO_DONE = true; enterFs(); });
-  document.getElementById('tvGoBtn').addEventListener('click', async ev => {
-    ev.stopPropagation();
-    const needAct = !tvToken() && !testToken() && (document.getElementById('tvCode').value || '').trim();
-    enterFs(); TV_GO_DONE = true; paintFs();
-    if (needAct && !(await tvActivate())) { TV_GO_DONE = false; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); paintFs(); }
-  });
+  let TV_GO_DONE = true;
   tvActPaint();
   testInit().then(ok => { if (ok) { tvActPaint(); window.dispatchEvent(new Event('resize')); tvPull().then(ch => { if (ch) tvRender(); }); } });
   document.getElementById('tvFsBtn').addEventListener('click', ev => { ev.stopPropagation(); enterFs(); });
