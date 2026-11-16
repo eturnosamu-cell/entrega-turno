@@ -1160,8 +1160,7 @@ function renderForm(e) {
       <h3 class="subh">Móviles de reposición <span>disponibles en caso de falla de un móvil en servicio</span></h3>
       <div class="rt" id="resBox"></div>`, 'Anota las 3 radios al lado de cada móvil. En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
     `<div class="duo">` +
-    card('s-estadistica', 'Estadística', `${staffField('est.encargado', 'Encargado')}
-      <div class="ynlist">${yn('est.siniestros', 'Siniestros durante el turno', 'SI')}${yn('est.faf', 'Notificación FAF', '')}</div>`) +
+    card('s-estadistica', 'Estadística', `<div class="ynlist">${yn('est.siniestros', 'Siniestros durante el turno', 'SI')}${yn('est.faf', 'Notificación FAF', '')}</div>`) +
     card('s-extricacion', 'Material de extricación', `${staffField('extr.encargado', 'Encargado')}
       <div class="ynlist">
         <div class="ynblock">${yn('extr.guardar', 'Pendiente guardar', 'SI')}${cond('extr.guardar', 'SI', inp('extr.guardarLugar', 'Lugar'))}</div>
@@ -1180,11 +1179,11 @@ function renderForm(e) {
         <div class="etile"><span>Vacíos por recargar</span>${stepper('oxigeno.vacios', 'Cilindros vacíos por recargar')}</div>
       </div>`, `Cilindros llenos en base. Si quedan menos de ${O2_MIN} de cualquiera de los dos, queda como novedad para pedir recarga.`),
     `<div class="duo">` +
-    card('s-bodega', 'Bodega diaria', `${staffField('bodega.encargado', 'Encargado')}
+    card('s-bodega', 'Bodega diaria', `${staffField('bodega.encargado', 'Encargado (PM)', 'PM')}
       ${tempBlock('bodega')}
       <div class="ynlist">${yn('bodega.limpia', 'Sala limpia y ordenada')}${yn('bodega.reponer', 'Pendiente reponer', 'SI')}</div>
       ${ta('bodega.obs', 'Observaciones', 2)}`, `Temperatura de la sala: rango ${rTxt(...tRange('bodega'))}. Se cambia en Ajustes.`) +
-    card('s-salaeq', 'Sala de equipos', `${staffField('salaeq.encargado', 'Encargado')}
+    card('s-salaeq', 'Sala de equipos', `${staffField('salaeq.encargado', 'Encargado (PM)', 'PM')}
       ${tempBlock('salaeq')}
       <div class="ynlist">${yn('salaeq.cargando', 'Equipos cargando')}${yn('salaeq.limpia', 'Sala limpia y ordenada')}</div>
       ${ta('salaeq.obs', 'Observaciones', 2)}`, `Temperatura de la sala: rango ${rTxt(...tRange('salaeq'))}. Se cambia en Ajustes.`) + `</div>`,
@@ -1240,7 +1239,6 @@ function sectionMissing(e) {
     if (miss.length) need('s-moviles', false, `Móvil ${i+1}: falta ${miss.join(', ')}`);
   });
   need('s-moviles', anyMovil, 'Al menos un móvil con tripulación');
-  need('s-estadistica', filled(e.est.encargado), 'Encargado de estadística');
   need('s-estadistica', filled(e.est.siniestros), 'Siniestros durante el turno');
   need('s-estadistica', filled(e.est.faf), 'Notificación FAF');
   need('s-radios', filled(e.radios.cargadas), 'Radios cargadas');
@@ -1889,7 +1887,7 @@ async function buildPdf(e) {
   sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
   const x = e.extr, b = e.bodega, sq = e.salaeq;
   sec('Revisión de áreas', {head:[['Área', 'Encargado', 'Detalle']], body:cl([
-    ['Estadística', e.est.encargado, `Siniestros durante el turno: ${yn2(e.est.siniestros)}\nNotificación FAF: ${yn2(e.est.faf)}`],
+    ['Estadística', '', `Siniestros durante el turno: ${yn2(e.est.siniestros)}\nNotificación FAF: ${yn2(e.est.faf)}`],
     ['Radios', '', `Cargadas: ${yn2(e.radios.cargadas)} · En base: ${e.radios.base || '-'} · En llamado: ${e.radios.llamado || '-'}${filled(e.radios.propias) ? '\nRadios propias: ' + e.radios.propias : ''}`],
     ['Material de extricación', x.encargado, `Pendiente guardar: ${yn2(x.guardar)}${x.guardar === 'SI' && x.guardarLugar ? ' (' + x.guardarLugar + ')' : ''}\nPendiente por rescatar: ${yn2(x.rescatar)}${x.rescatar === 'SI' && x.rescatarLugar ? ' (' + x.rescatarLugar + ')' : ''}\nPendiente reponer: ${yn2(x.reponer)}${x.reponer === 'SI' && x.reponerDet ? ' (' + x.reponerDet + ')' : ''}`],
     ['Bodega diaria', b.encargado, `${tPdf(e, 'bodega')}\nLimpia y ordenada: ${yn2(b.limpia)} · Pendiente reponer: ${yn2(b.reponer)}${filled(b.obs) ? '\nObservaciones: ' + b.obs : ''}`],
