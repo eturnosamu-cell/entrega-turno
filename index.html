@@ -724,6 +724,7 @@ html.tvmode body::before{display:none}
       </div>
       <div class="top-act">
         <span class="userbox" id="userBox" hidden><span id="userName"></span><button class="btn ghost sm" type="button" data-act="logout">Salir</button></span>
+        <button class="btn ghost" type="button" data-act="movEstado" id="topMov" hidden>Móviles</button>
         <button class="btn ghost" type="button" data-act="pdfCur" title="Descarga la entrega que estás viendo en PDF">Descargar PDF</button>
         <button class="btn ghost" type="button" data-act="stock">Stock</button>
         <button class="btn ghost" type="button" data-act="history">Historial</button>
@@ -956,7 +957,13 @@ let genFilter = {q:'', used:false};
 let showTables = {};
 
 const cur = () => view.mode === 'draft' ? store.draft : (store.history.find(h => h.id === view.id) || store.draft);
-const isRO = () => view.mode !== 'draft';
+/* permisos: T jefes de turno (T1 a T4), J jefatura (MJ, SA) y administrador editan todo, novedades incluidas;
+   A ambulancias solo el estado de los móviles; el resto (enlace de prueba, reanimadores) solo mira */
+const canEdit = () => !!(SES && SES.token && (SES.rol === 'T' || SES.rol === 'J' || SES.admin));
+const canMov = () => canEdit() || !!(SES && SES.token && SES.rol === 'A');
+const opMov = op => op && op.p && op.p[0] === 'live' && ((op.p[1] === 'draft' && op.p[2] === 'reserva') || (op.p[1] === 'settings' && op.p[2] === 'flota'));
+const isRO = () => view.mode !== 'draft' || !canEdit();
+function permChanged() { try { if (view.mode === 'draft') renderAll(); } catch (e) {} const m = document.getElementById('topMov'); if (m) m.hidden = !(SES && SES.rol === 'A'); }
 const sortHistory = () => store.history.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
 
 
@@ -1400,12 +1407,18 @@ function renderTop() {
   const e = cur();
   $('#folio').textContent = view.mode === 'draft' ? folio(store.settings.nextNum) : folio(e.numero);
   const mb = $('#modeBadge');
-  mb.textContent = view.mode === 'draft' ? 'En curso' : 'Guardada · solo lectura';
+  mb.textContent = view.mode === 'draft' ? (canEdit() ? 'En curso' : 'En curso · solo mirar') : 'Guardada · solo lectura';
   mb.classList.toggle('ro', isRO());
   $('#topSave').hidden = isRO();
 }
 function renderBanner() {
   const el = $('#banner');
+  if (view.mode === 'draft' && !canEdit()) {
+    const amb = SES && SES.rol === 'A';
+    el.innerHTML = `<div class="banner ro"><p>${amb ? '<b>Encargado de ambulancias:</b> puedes cambiar el estado de los móviles con el botón <b>Móviles</b>. El resto de la entrega solo se puede mirar.' : '<b>Solo mirar.</b> La entrega se ve en vivo, pero no se puede cambiar. La llena el jefe de turno; la jefatura y los jefes de turno pueden agregar novedades. Para editar, entra con la clave de tu turno o de jefatura.'}</p>
+      <div class="acts">${amb ? '<button type="button" class="btn sm primary" data-act="movEstado">Móviles</button>' : '<button type="button" class="btn sm primary" data-act="logout">Entrar con clave</button>'}</div></div>`;
+    return;
+  }
   if (isRO()) {
     const e = cur();
     el.innerHTML = `<div class="banner ro"><p>Estás viendo la entrega <b>${folio(e.numero)}</b> del ${fmtDate(e.fecha)}${e.turno ? ' · turno ' + e.turno.toLowerCase() : ''}. No se puede editar.</p>
@@ -2240,6 +2253,15 @@ const actions = {
       <p class="muted">Al guardar, la entrega pasa al historial y queda de solo lectura. Se abre una entrega nueva en blanco.${(store.settings.backup || {}).auto !== false ? (backupMode() === 'drive' || backupMode() === 'script' ? ' Se crea el PDF y se sube a Google Drive.' : backupMode() === 'folder' ? ' Se crea el PDF y se guarda en la carpeta de respaldo.' : backupMode() === 'none' ? '' : ' Se crea el PDF de la entrega.') : ''}</p>
       <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Seguir editando</button><button type="button" class="btn primary" data-act="confirmSave">${list.length ? 'Guardar de todas formas' : 'Guardar entrega'}</button></div>`);
   },
+  verSolo() { enterTest(); },
+  movEstado() {
+    if (!canMov()) { toast('Entra con la clave de ambulancias o de tu turno.'); return; }
+    const d = store.draft; if (!d.reserva) d.reserva = {};
+    const fl = (store.settings.flota || []).filter(f => filled(f.num));
+    openSheet(`<h2>Estado de los móviles</h2><p class="muted">Lo que marques aquí se ve al tiro en la entrega y en la pantalla TV.</p>
+      <div class="movlist">${fl.map(f => `<div class="resrow"><b>${esc(flotaLabel(f))}</b><select class="rsel" data-movnum="${esc(f.num)}" data-v="${esc(d.reserva[f.num] || '')}"><option value="">Sin registro</option>${RES_EST.map(x => `<option${d.reserva[f.num] === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>`).join('')}</div>
+      <div class="sheet-act"><button type="button" class="btn primary" data-act="closeSheet">Listo</button></div>`);
+  },
   logout() { if (SES && SES.code === 'PRUEBA') { SES = null; try { localStorage.removeItem(SES_KEY); } catch (e) {} paintUser(); showLogin(); return; } logout(); },
   useKey() { pickerOpen = false; showLogin(); },
   accesos() { accesosSheet(); },
@@ -2534,7 +2556,7 @@ const actions = {
       <h3>Respaldo PDF en la nube</h3>
       <div id="bkHost">${backupBoxHtml()}</div>
       <h3>Claves de acceso</h3>
-      ${SES && SES.admin ? `<div class="srow"><p style="flex:1">Las claves de reanimadores y jefatura se guardan en Google.</p><button type="button" class="btn sm" data-act="accesos">Ver y cambiar claves</button></div>` : '<p class="muted">Solo la jefatura o el administrador pueden cambiar claves.</p>'}
+      ${SES && SES.admin ? `<div class="srow"><p style="flex:1">Las claves de jefatura, jefes de turno, ambulancias y reanimadores se guardan en Google.</p><button type="button" class="btn sm" data-act="accesos">Ver y cambiar claves</button></div>` : '<p class="muted">Solo la jefatura o el administrador pueden cambiar claves.</p>'}
       <h3>Personal</h3>
       <div class="srow"><p style="flex:1">${store.settings.personal.length} funcionarios con clave (R, PM y C).</p><button type="button" class="btn sm" data-act="personal">Ver y editar nómina</button></div>
       <h3>Móviles</h3>
@@ -2861,7 +2883,7 @@ function renderAll() {
    (token) que dura el turno; sin ese permiso Google no entrega ni recibe datos.
    La jefatura (MJ, SA) y el administrador entran también a Ajustes y Stock y manejan las claves. */
 const SES_KEY = 'samu-entrega-sesion', OFF_KEY = 'samu-entrega-offline', TV_KEY = 'samu-entrega-tv';
-const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora asistencial'};
+const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora asistencial', T1:'Turno 1', T2:'Turno 2', T3:'Turno 3', T4:'Turno 4', AMB:'Encargado de ambulancias'};
 let SES = null, loginBusy = false;
 const TEST_TOK = 'samu-entrega-prueba';
 const URL_KEY = (() => { try { return new URLSearchParams(location.search).get('k') || ''; } catch (e) { return ''; } })();
@@ -2884,7 +2906,7 @@ async function testInit() {
 const authToken = () => (SES && SES.token) || (document.documentElement.classList.contains('tvmode') ? (tvToken() || testToken()) : testToken());
 const tvToken = () => { try { return localStorage.getItem(TV_KEY) || ''; } catch (e) { return ''; } };
 function accLabel(code, nombre) {
-  if (code === 'PRUEBA') return 'Modo prueba';
+  if (code === 'PRUEBA') return 'Solo mirar';
   if (JEF_NOMBRE[code] || nombre) return `${nombre || JEF_NOMBRE[code]} (${code})`;
   const p = store.settings.personal.find(x => x.clave.toUpperCase() === code);
   return p ? shortLabel(p) : code;
@@ -2906,13 +2928,13 @@ function showLogin(msg) {
     ${logo ? `<img src="${logo}" alt="" width="70" height="74">` : ''}
     <div class="eyebrow">SAMU 131 · Magallanes</div>
     <h2>Entrega de turno</h2>
-    <p class="muted">Ingresa con tu código y tu clave.</p>
-    <label class="fld" for="logCode"><span class="lbl">Código</span><input type="text" id="logCode" placeholder="R7, MJ o SA" autocapitalize="characters" spellcheck="false"></label>
+    <p class="muted">Ingresa con el código de tu turno (T1 a T4), de jefatura (MJ, SA) o de ambulancias (AMB). Sin clave, la entrega solo se puede mirar.</p>
+    <label class="fld" for="logCode"><span class="lbl">Código</span><input type="text" id="logCode" placeholder="T1, MJ, SA o AMB" autocapitalize="characters" spellcheck="false"></label>
     <p class="login-who" id="logWho"></p>
     <label class="fld" for="logPin"><span class="lbl">Clave</span><input type="password" id="logPin" inputmode="numeric" maxlength="8"></label>
     <p class="login-err" id="logErr">${msg ? esc(msg) : ''}</p>
     <button type="submit" class="btn primary lg" id="logBtn">Entrar</button>
-    <p class="muted small">La pantalla TV no necesita clave.</p>
+    ${hasTest() ? '<button type="button" class="linkbtn" data-act="verSolo">Volver a solo mirar</button>' : '<p class="muted small">La pantalla TV no necesita clave.</p>'}
   </form></div>`;
   document.getElementById('app').setAttribute('aria-hidden', 'true');
   setTimeout(() => { const c = $('#logCode'); if (c) c.focus(); }, 30);
@@ -2944,7 +2966,7 @@ function pickPerson() {
   if (!t) { $('#pickErr').textContent = 'Conectando con Google… inténtalo en unos segundos.'; testInit().then(refreshPicker); return; }
   SES = {code, rol:'R', admin:false, nombre:'', token:t.token, exp:t.exp, prueba:true};
   try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {}
-  pickerOpen = false; hideLogin(); paintUser(); toast(`Hola, ${sesLabel()}`);
+  pickerOpen = false; hideLogin(); paintUser(); permChanged(); toast(`Hola, ${sesLabel()}`);
   SY.noScript = false; syncStart(); syncSoon();
 }
 document.addEventListener('submit', ev => { if (ev.target.id === 'pickForm') { ev.preventDefault(); pickPerson(); } });
@@ -2962,7 +2984,7 @@ function enterTest(msg) {
   const t = testTokObj(); if (!t) { showLogin(msg); return; }
   SES = {code:'PRUEBA', rol:'R', admin:false, nombre:'', token:t.token, exp:t.exp, prueba:true};
   try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {}
-  hideLogin(); paintUser(); if (msg) toast(msg.replace(' Sesión cerrada.', ''));
+  hideLogin(); paintUser(); permChanged(); if (msg) toast(msg.replace(' Sesión cerrada.', ''));
   SY.noScript = false; syncStart(); syncSoon();
 }
 function hideLogin() { pickerOpen = false; $('#loginHost').innerHTML = ''; document.getElementById('app').removeAttribute('aria-hidden'); }
@@ -2996,7 +3018,7 @@ async function tryLogin() {
     SES = {code, rol:o.rol, admin:o.admin, nombre:o.nombre, token:'', exp:Date.now() + 14 * 3600e3};
   } finally { loginBusy = false; if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = 'Entrar'; } }
   try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {}
-  hideLogin(); paintUser(); toast(`Hola, ${sesLabel()}`);
+  hideLogin(); paintUser(); permChanged(); toast(`Hola, ${sesLabel()}`);
   SY.noScript = false; SY.rev = null; syncStart(); syncSoon();
   if (pendingBackups().length && backupMode() !== 'none') runBackups(pendingBackups(), {quiet:true});
 }
@@ -3028,8 +3050,10 @@ async function accesosSheet() {
     ${a.tiene && code !== (SES && SES.code) ? `<button type="button" class="xbtn" data-act="accDel" data-code="${esc(code)}" aria-label="Quitar acceso de ${esc(code)}" title="Quitar acceso">×</button>` : '<span></span>'}</div>`; };
   openSheet(`<h2>Claves de acceso</h2>
     <p class="muted">Las claves se guardan en Google, nunca en este archivo. Cada persona entra con su código y su clave (4 a 8 números). Al cambiar una clave, esa persona debe volver a entrar en todos sus equipos.</p>
-    <h3>Jefatura</h3><div class="acclist">${['MJ', 'SA'].map(c => row(c, '', true)).join('')}</div>
-    <h3>Reanimadores</h3><div class="acclist">${reas.map(p => row(p.clave.toUpperCase(), titleCase(p.nombre) + (p.sup ? ' (suplente)' : ''), false)).join('')}</div>
+    <h3>Jefatura (editan todo)</h3><div class="acclist">${['MJ', 'SA'].map(c => row(c, '', true)).join('')}</div>
+    <h3>Jefes de turno (editan todo)</h3><div class="acclist">${['T1', 'T2', 'T3', 'T4'].map(c => row(c, '', true)).join('')}</div>
+    <h3>Ambulancias (solo estado de móviles)</h3><div class="acclist">${row('AMB', '', true)}</div>
+    <h3>Reanimadores (solo miran)</h3><div class="acclist">${reas.map(p => row(p.clave.toUpperCase(), titleCase(p.nombre) + (p.sup ? ' (suplente)' : ''), false)).join('')}</div>
     <div class="sheet-act"><button type="button" class="btn" data-act="settings">Volver a Ajustes</button><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>`, 'wide');
 }
 
@@ -3142,7 +3166,8 @@ async function syncCycle() {
   try {
     if (SY.rev == null) await syncFirst();
     const sent = clone(syncView());
-    const ops = sdiff(SY.base, sent, [], []);
+    let ops = sdiff(SY.base, sent, [], []);
+    ops = canEdit() ? ops : canMov() ? ops.filter(opMov) : [];
     const r = ops.length ? await syncPost({action:'push', since:SY.rev, ops}) : await syncPost({action:'pull', since:SY.rev});
     if (r.fast) sapply(SY.base, ops, r.rev); else mergeResp(SY.base, r);
     if (r.rev !== SY.rev) SY.act = Date.now();
@@ -3424,6 +3449,12 @@ function startTV() {
   const showHint = () => { const h = document.getElementById('tvHint'); h.style.opacity = '1'; host.classList.remove('nocur'); clearTimeout(curT); curT = setTimeout(() => { host.classList.add('nocur'); h.style.opacity = '0'; document.getElementById('tvFsBtn').classList.add('hide'); }, 4000); document.getElementById('tvFsBtn').classList.remove('hide'); };
   host.addEventListener('mousemove', showHint); showHint();
 }
+document.addEventListener('change', ev => {
+  const t = ev.target; if (!t.dataset || t.dataset.movnum == null || !canMov()) return;
+  const d = store.draft; if (!d.reserva) d.reserva = {};
+  if (t.value) d.reserva[t.dataset.movnum] = t.value; else delete d.reserva[t.dataset.movnum];
+  t.dataset.v = t.value; persist(); refresh(); toast('Móvil actualizado');
+});
 const VER_KEY = 'samu-entrega-turno-ver';
 const APP_VER = (() => { try { const t = SELF_SCRIPT ? SELF_SCRIPT.textContent : ''; return t.length + ':' + pinHash(t.slice(0, 80000) + t.slice(-80000)); } catch (e) { return '0'; } })();
 window.addEventListener('hashchange', () => { if ((location.hash === '#tv') !== document.documentElement.classList.contains('tvmode')) location.reload(); });
@@ -3433,7 +3464,7 @@ else {
 try { localStorage.setItem(VER_KEY, APP_VER); } catch (e) {}
 const storageOk = load();
 renderAll();
-loadSes(); paintUser(); if (!SES) startEntry();
+loadSes(); paintUser(); permChanged(); if (!SES) startEntry();
 else if (SES.prueba) testInit();
 setSave(storageOk ? 'ok' : 'fail');
 initBackup();
