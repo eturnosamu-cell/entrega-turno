@@ -216,7 +216,45 @@ select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--
 .seg button:hover{background:var(--surface)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink-2)}
 .seg button.good{background:var(--good-soft);color:var(--good-ink);box-shadow:inset 0 0 0 1.5px var(--good)}
-.seg button.bad{background:var(--warn-soft);color:var(--warn-ink);box-shadow:inset 0 0 0 1.5px var(--warn)}
+.seg button.bad{background:var(--crit);color:#fff;box-shadow:none}
+.seg button.good{background:var(--good-ink);color:#fff;box-shadow:none}
+.seg button.neu{background:var(--accent);color:var(--accent-ink);box-shadow:none}
+/* ---------- colores por grupo de secciones ---------- */
+:root{
+--g1:#2f62d8; --g1t:#1f47a8; --g1s:rgba(47,98,216,.08);
+--g2:#1f9d55; --g2t:#167a41; --g2s:rgba(31,157,85,.08);
+--g3:#0e9bb8; --g3t:#0a7088; --g3s:rgba(14,155,184,.08);
+--g4:#7c4dce; --g4t:#5f35aa; --g4s:rgba(124,77,206,.08);
+--g5:#e0a100; --g5t:#8a6200; --g5s:rgba(224,161,0,.10);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--g1t:#8fb0ff;--g2t:#7fd6a2;--g3t:#7fd3e6;--g4t:#c3a6f5;--g5t:#f2cc6b;--g1s:rgba(47,98,216,.16);--g2s:rgba(31,157,85,.16);--g3s:rgba(14,155,184,.16);--g4s:rgba(124,77,206,.18);--g5s:rgba(224,161,0,.16)}}
+:root[data-theme="dark"]{--g1t:#8fb0ff;--g2t:#7fd6a2;--g3t:#7fd3e6;--g4t:#c3a6f5;--g5t:#f2cc6b;--g1s:rgba(47,98,216,.16);--g2s:rgba(31,157,85,.16);--g3s:rgba(14,155,184,.16);--g4s:rgba(124,77,206,.18);--g5s:rgba(224,161,0,.16)}
+[data-g="1"]{--gc:var(--g1);--gt:var(--g1t);--gs:var(--g1s)}
+[data-g="2"]{--gc:var(--g2);--gt:var(--g2t);--gs:var(--g2s)}
+[data-g="3"]{--gc:var(--g3);--gt:var(--g3t);--gs:var(--g3s)}
+[data-g="4"]{--gc:var(--g4);--gt:var(--g4t);--gs:var(--g4s)}
+[data-g="5"]{--gc:var(--g5);--gt:var(--g5t);--gs:var(--g5s)}
+.sec[data-g]{border-top:5px solid var(--gc);overflow:hidden}
+.sec[data-g] > .sec-h{background:var(--gs)}
+.sec[data-g] > .sec-h h2{color:var(--gt)}
+.grp-h{display:flex;align-items:center;gap:12px;margin:18px 0 -2px;font:700 15px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--gt)}
+.grp-h:first-child{margin-top:0}
+.grp-h b{flex:none;width:30px;height:30px;border-radius:50%;background:var(--gc);color:#fff;display:grid;place-items:center;font-size:16px;letter-spacing:0}
+.grp-h::after{content:"";flex:1;height:2px;border-radius:2px;background:var(--gc);opacity:.35}
+.navgrp{display:flex;flex-direction:column;gap:1px;margin-bottom:6px}
+.secnav-v .navgrp .nav-i{min-height:32px}
+.secnav-v .navgrp .navlbl{display:flex;align-items:center;gap:8px;color:var(--gt);padding:6px 12px 6px}
+.navgrp .navlbl b{width:20px;height:20px;border-radius:50%;background:var(--gc);color:#fff;display:grid;place-items:center;font-size:12px;letter-spacing:0}
+.secnav-v .nav-i[data-g]{border-left:3px solid transparent;border-radius:0 8px 8px 0}
+.secnav-v .nav-i[data-g]:hover{border-left-color:var(--gc)}
+.secnav-v .nav-i[data-g].on{background:var(--gs);border-left-color:var(--gc)}
+.secnav-h .nav-i[data-g]{box-shadow:inset 0 -3px 0 var(--gc)}
+/* resumen de arriba con color según estado */
+.chip[data-st="good"]{background:var(--good-soft);border-color:var(--good)}
+.chip[data-st="warn"]{background:var(--warn-soft)}
+.chip[data-st="crit"]{background:var(--crit-soft)}
+.chip[data-st="good"] .v{color:var(--good-ink)}.chip[data-st="warn"] .v{color:var(--warn-ink)}.chip[data-st="crit"] .v{color:var(--crit-ink)}
+
 .seg button.neu{background:var(--accent-soft);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .yn{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;padding:6px 0;border-bottom:1px dashed var(--line-2)}
 .yn .q{font:500 16px/1.3 var(--f-body);min-width:0;flex:1 1 180px}
@@ -656,6 +694,10 @@ html.tvmode body::before{display:none}
 .tv-rad b{font:700 34px/1 var(--f-display);color:#ede914;letter-spacing:.02em}
 .tv-bot{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:24px;margin-top:26px;min-height:0}
 .tv-pan{background:#1a2063;border:2px solid #2c357f;border-radius:14px;padding:18px 28px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.tv-pan[data-tg]{border-top:6px solid var(--tg)}.tv-pan[data-tg] .tv-sec{color:var(--tg)}
+.tv-pan[data-tg="nov"]{--tg:#f2c230}.tv-pan[data-tg="res"]{--tg:#6f97ff}.tv-pan[data-tg="o2"]{--tg:#4cc884}
+.tv-card:not(.empty){border-top:6px solid #6f97ff}
+.tv-movsec{color:#8fb0ff!important}
 .tv-pan .tv-sec{margin:0 0 12px}
 .tv-win{flex:1;min-height:0;overflow:hidden;position:relative}
 .tv-roll{will-change:transform}
@@ -811,13 +853,16 @@ function rerenderMovil(i) {
   const nu = tmp.firstElementChild; el.replaceWith(nu); fillInputs(nu);
 }
 const rerenderMoviles = () => cur().moviles.forEach((m, i) => rerenderMovil(i));
-const SECTIONS = [
-  ['s-turno','Turno'],['s-moviles','Móviles y tripulación'],['s-estadistica','Estadística'],['s-radios','Radios'],['s-oxigeno','Oxígeno'],
-  ['s-extricacion','Material de extricación'],['s-bodega','Bodega diaria'],['s-salaeq','Sala de equipos'],
-  ['s-equipos','Equipos clínicos'],['s-insumos','Insumos de alto costo'],['s-controlados','Medicamentos controlados'],
-  ['s-generales','Otros medicamentos'],['s-refri','Temperatura refrigerador'],
-  ['s-novedades','Novedades del turno'],['s-cierre','Entrega y recepción']
+const GROUPS = [
+  {g:1, name:'Turno y móviles', ids:['s-turno','s-moviles','s-radios']},
+  {g:2, name:'Base y áreas', ids:['s-oxigeno','s-estadistica','s-extricacion','s-bodega','s-salaeq']},
+  {g:3, name:'Temperaturas y equipos', ids:['s-refri','s-equipos']},
+  {g:4, name:'Fármacos e insumos', ids:['s-insumos','s-controlados','s-generales']},
+  {g:5, name:'Cierre', ids:['s-novedades','s-cierre']}
 ];
+const SEC_NAME = {'s-turno':'Turno','s-moviles':'Móviles y tripulación','s-radios':'Radios','s-oxigeno':'Oxígeno','s-estadistica':'Estadística','s-extricacion':'Material de extricación','s-bodega':'Bodega diaria','s-salaeq':'Sala de equipos','s-refri':'Temperatura refrigerador','s-equipos':'Equipos clínicos','s-insumos':'Insumos de alto costo','s-controlados':'Medicamentos controlados','s-generales':'Otros medicamentos','s-novedades':'Novedades del turno','s-cierre':'Entrega y recepción'};
+const SECTIONS = GROUPS.flatMap(G => G.ids.map(id => [id, SEC_NAME[id]]));
+const SEC_G = {}; GROUPS.forEach(G => G.ids.forEach(id => { SEC_G[id] = G.g; }));
 const OPTIONAL = new Set(['s-generales','s-novedades','s-jefatura']);
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const LS_KEY = 'samu-entrega-turno-v1';
@@ -1040,7 +1085,7 @@ function cbx(path, role, aria, short) {
 const staffField = (path, label, role = 'all') => `<div class="fld"><label class="lbl" for="${fid(path)}">${label}</label>${cbx(path, role, label)}</div>`;
 const cond = (path, val, inner) => `<div class="cond" data-show="${path}=${val}" hidden>${inner}</div>`;
 function card(id, title, body, sub = '') {
-  return `<section class="sec" id="${id}" aria-labelledby="h-${id}"><header class="sec-h"><div><h2 id="h-${id}">${title}</h2>${sub ? `<p class="sub" id="sub-${id}">${sub}</p>` : ''}</div><span class="pill" data-status="${id}"></span></header><div class="sec-b">${body}</div></section>`;
+  return `<section class="sec" id="${id}" data-g="${SEC_G[id] || ''}" aria-labelledby="h-${id}"><header class="sec-h"><div><h2 id="h-${id}">${title}</h2>${sub ? `<p class="sub" id="sub-${id}">${sub}</p>` : ''}</div><span class="pill" data-status="${id}"></span></header><div class="sec-b">${body}</div></section>`;
 }
 function mcell(path, label, mode = 'numeric', numType = 'int') {
   return `<label class="mcell" for="${fid(path)}"><span class="mlbl">${label}</span><input id="${fid(path)}" type="text" inputmode="${mode}" data-bind="${path}"${numType ? ` data-num="${numType}"` : ''} autocomplete="off" aria-label="${esc(label)}"></label>`;
@@ -1150,6 +1195,7 @@ function renderForm(e) {
       <span class="mstat" data-pstat="${i}"></span></div>`).join('');
 
   $('#fs').innerHTML = [
+    `<div class="grp-h" data-g="1"><b>1</b>Turno y móviles</div>`,
     card('s-turno', 'Turno', `<div class="grid g-turno">
         <div class="fld"><span class="lbl" id="l-turno">Turno</span>${seg('turno', ['Largo','Noche'], '', 'l-turno')}</div>
         ${inp('fecha', 'Fecha y hora', {type:'datetime-local'})}
@@ -1159,6 +1205,18 @@ function renderForm(e) {
     card('s-moviles', 'Móviles y tripulación', `<div class="g-mov">${e.moviles.map((m, i) => movilCard(i, e)).join('')}</div>
       <h3 class="subh">Móviles de reposición <span>disponibles en caso de falla de un móvil en servicio</span></h3>
       <div class="rt" id="resBox"></div>`, 'Anota las 3 radios al lado de cada móvil. En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
+    card('s-radios', 'Radios', `<div class="grid g3" style="align-items:end">
+        <div class="fld"><span class="lbl" id="l-radcarg">Radios cargadas</span>${seg('radios.cargadas', ['SI','NO'], 'NO', 'l-radcarg')}</div>
+        <div class="fld"><span class="lbl">Nº en base</span>${stepper('radios.base', 'Radios en base')}</div>
+        <div class="fld"><span class="lbl">Nº en llamado</span>${stepper('radios.llamado', 'Radios en llamado')}</div>
+      </div>
+      ${ta('radios.propias', 'Radios propias (funcionario y Nº)', 2)}`),
+    `<div class="grp-h" data-g="2"><b>2</b>Base y áreas</div>`,
+    card('s-oxigeno', 'Stock de oxígeno', `<div class="g-eq">
+        <div class="etile"><span>Cilindros 1 m³ llenos</span>${stepper('oxigeno.g', 'Cilindros de 1 m³ llenos')}</div>
+        <div class="etile"><span>Cilindros 0,5 m³ llenos</span>${stepper('oxigeno.p', 'Cilindros de 0,5 m³ llenos')}</div>
+        <div class="etile"><span>Vacíos por recargar</span>${stepper('oxigeno.vacios', 'Cilindros vacíos por recargar')}</div>
+      </div>`, `Cilindros llenos en base. Si quedan menos de ${O2_MIN} de cualquiera de los dos, queda como novedad para pedir recarga.`),
     `<div class="duo">` +
     card('s-estadistica', 'Estadística', `<div class="ynlist">${yn('est.siniestros', 'Siniestros durante el turno', 'SI')}${yn('est.faf', 'Notificación FAF', '')}</div>`) +
     card('s-extricacion', 'Material de extricación', `${staffField('extr.encargado', 'Encargado (PM)', 'PM')}
@@ -1167,17 +1225,6 @@ function renderForm(e) {
         <div class="ynblock">${yn('extr.rescatar', 'Pendiente por rescatar', 'SI')}${cond('extr.rescatar', 'SI', inp('extr.rescatarLugar', 'Lugar'))}</div>
         <div class="ynblock">${yn('extr.reponer', 'Pendiente reponer', 'SI')}${cond('extr.reponer', 'SI', inp('extr.reponerDet', 'Especifique'))}</div>
       </div>`) + `</div>`,
-    card('s-radios', 'Radios', `<div class="grid g3" style="align-items:end">
-        <div class="fld"><span class="lbl" id="l-radcarg">Radios cargadas</span>${seg('radios.cargadas', ['SI','NO'], 'NO', 'l-radcarg')}</div>
-        <div class="fld"><span class="lbl">Nº en base</span>${stepper('radios.base', 'Radios en base')}</div>
-        <div class="fld"><span class="lbl">Nº en llamado</span>${stepper('radios.llamado', 'Radios en llamado')}</div>
-      </div>
-      ${ta('radios.propias', 'Radios propias (funcionario y Nº)', 2)}`),
-    card('s-oxigeno', 'Stock de oxígeno', `<div class="g-eq">
-        <div class="etile"><span>Cilindros 1 m³ llenos</span>${stepper('oxigeno.g', 'Cilindros de 1 m³ llenos')}</div>
-        <div class="etile"><span>Cilindros 0,5 m³ llenos</span>${stepper('oxigeno.p', 'Cilindros de 0,5 m³ llenos')}</div>
-        <div class="etile"><span>Vacíos por recargar</span>${stepper('oxigeno.vacios', 'Cilindros vacíos por recargar')}</div>
-      </div>`, `Cilindros llenos en base. Si quedan menos de ${O2_MIN} de cualquiera de los dos, queda como novedad para pedir recarga.`),
     `<div class="duo">` +
     card('s-bodega', 'Bodega diaria', `${staffField('bodega.encargado', 'Encargado (PM)', 'PM')}
       ${tempBlock('bodega')}
@@ -1187,7 +1234,10 @@ function renderForm(e) {
       ${tempBlock('salaeq')}
       <div class="ynlist">${yn('salaeq.cargando', 'Equipos cargando')}${yn('salaeq.limpia', 'Sala limpia y ordenada')}</div>
       ${ta('salaeq.obs', 'Observaciones', 2)}`, `Temperatura de la sala: rango ${rTxt(...tRange('salaeq'))}. Se cambia en Ajustes.`) + `</div>`,
+    `<div class="grp-h" data-g="3"><b>3</b>Temperaturas y equipos</div>`,
+    card('s-refri', 'Temperatura refrigerador', tempBlock('refri', true), `Cadena de frío: rango ${rTxt(...tRange('refri'))}. Se cambia en Ajustes.`),
     card('s-equipos', 'Equipos clínicos', `<div class="g-eq">${EQUIPOS.map(([k, n]) => `<div class="etile"><span>${n}</span>${stepper('equipos.' + k, n + ' operativos')}</div>`).join('')}</div>`, 'Cantidad operativa de cada equipo al momento de la entrega.'),
+    `<div class="grp-h" data-g="4"><b>4</b>Fármacos e insumos</div>`,
     card('s-insumos', 'Insumos de alto costo', `<div class="ynlist">
         <div class="ynblock">${yn('insumos.mascara', 'Uso de máscara laríngea', '')}${cond('insumos.mascara', 'SI', inp('insumos.mascaraN', 'Nº', {mode:'decimal'}))}</div>
         <div class="ynblock">${yn('insumos.trocar', 'Uso de trocar osteólisis', '')}${cond('insumos.trocar', 'SI', `<div class="fld"><span class="lbl" id="l-trocar">Tipo</span>${seg('insumos.trocarTipo', ['Adulto','Pediátrico'], '', 'l-trocar')}</div>`)}</div>
@@ -1207,7 +1257,7 @@ function renderForm(e) {
       </div>
       <div class="ggrid" id="genGrid">${genTiles(e)}</div>
       <div class="gadd"><input type="text" id="genNew" placeholder="Agregar otro medicamento o insumo" aria-label="Nombre del medicamento a agregar" autocomplete="off"><button type="button" class="btn sm" data-act="addGen">Agregar</button></div>`, 'Cantidad utilizada durante el turno. Al guardar la entrega se descuenta del stock.'),
-    card('s-refri', 'Temperatura refrigerador', tempBlock('refri', true), `Cadena de frío: rango ${rTxt(...tRange('refri'))}. Se cambia en Ajustes.`),
+    `<div class="grp-h" data-g="5"><b>5</b>Cierre</div>`,
     card('s-novedades', 'Novedades, incidentes u observaciones del turno', `<div class="jlist" id="novList"></div>
       <div class="sevrow">${sevPick('nov')}<div class="gadd"><input type="text" id="novNew" placeholder="Primero elige el color" disabled aria-label="Nueva novedad" autocomplete="off" maxlength="300"><button type="button" class="btn sm primary" data-act="addNov">Agregar</button></div></div>
       <div id="novLegacy" hidden>${ta('novedades', 'Texto anterior (sin color)', 3)}</div>
@@ -1400,9 +1450,9 @@ function fillInputs(root = $('#fs'), skipActive) {
   });
 }
 function renderNav() {
-  const items = SECTIONS.map(([id, name]) => `<button type="button" class="nav-i" data-act="go" data-id="${id}" data-nav="${id}"><i class="dot"></i>${name}</button>`).join('');
-  $('#navH').innerHTML = items;
-  $('#navV').innerHTML = `<div class="navlbl">Secciones</div>${items}`;
+  const it = ([id, name]) => `<button type="button" class="nav-i" data-act="go" data-id="${id}" data-nav="${id}" data-g="${SEC_G[id]}"><i class="dot"></i>${name}</button>`;
+  $('#navH').innerHTML = SECTIONS.map(it).join('');
+  $('#navV').innerHTML = GROUPS.map(G => `<div class="navgrp" data-g="${G.g}"><div class="navlbl"><b>${G.g}</b>${G.name}</div>${G.ids.map(id => it([id, SEC_NAME[id]])).join('')}</div>`).join('');
 }
 function renderTop() {
   const e = cur();
@@ -3385,13 +3435,13 @@ function tvRender() {
         <div class="tv-sub">${horario}Jefe de turno: <b>${filled(e.jefe) ? esc(tvShort(e.jefe)) : 'por asignar'}</b></div></div>
       <div class="tv-clock"><b id="tvClock">${hhmm()}</b><span class="${live ? 'live' : ''}">${live ? '● En curso' : 'Última guardada'} · Entrega ${nro} · act. ${tvSeen ? pad(tvSeen.getHours()) + ':' + pad(tvSeen.getMinutes()) : '—'}</span></div>
     </header>
-    <div class="tv-sec">Móviles operativos<span>${operativos} en servicio</span></div>
+    <div class="tv-sec tv-movsec">Móviles operativos<span>${operativos} en servicio</span></div>
     <div class="tv-mov">${cards}</div>
     <div class="tv-bot">
-      <section class="tv-pan"><div class="tv-sec">Novedades del turno<span>${items.length ? items.length + (items.length === 1 ? ' novedad' : ' novedades') : ''}</span></div>
+      <section class="tv-pan" data-tg="nov"><div class="tv-sec">Novedades del turno<span>${items.length ? items.length + (items.length === 1 ? ' novedad' : ' novedades') : ''}</span></div>
         <div class="tv-win"><div class="tv-roll" id="tvRoll">${items.join('') || '<p class="tv-none">Sin novedades por ahora.</p>'}</div></div></section>
-      <section class="tv-pan"><div class="tv-sec">Reposición</div>${resHtml}</section>
-      <section class="tv-pan"><div class="tv-sec">Oxígeno en base</div>${o2Html}</section>
+      <section class="tv-pan" data-tg="res"><div class="tv-sec">Reposición</div>${resHtml}</section>
+      <section class="tv-pan" data-tg="o2"><div class="tv-sec">Oxígeno en base</div>${o2Html}</section>
     </div>`;
   /* si las novedades no caben, desfilan solas hacia arriba */
   const roll = document.getElementById('tvRoll'), win = roll.parentElement;
