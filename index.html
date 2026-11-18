@@ -593,6 +593,11 @@ fieldset:disabled .cbx-btn,fieldset:disabled .cbx-clr{display:none}
 .banner.bk{background:var(--warn-soft)}
 .banner.bkok{background:var(--good-soft)}
 .banner.enc{background:var(--good-soft);padding:8px 16px}
+.cond .fld.inc{grid-column:1/-1}
+.fld.inc .seg{display:flex;flex-wrap:wrap;width:100%}
+.fld.inc .seg button{flex:1 1 auto;font-size:14px;letter-spacing:.02em}
+.fafmail{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.fafmail .srow{display:flex;flex-wrap:wrap;gap:8px}
 .diskbtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;padding:0;border-radius:8px;border:1px solid var(--line,#cfd8e3);background:transparent;color:inherit;cursor:pointer}
 .diskbtn:hover{background:var(--info-soft)}
 .diskbtn svg{width:18px;height:18px}
@@ -930,7 +935,7 @@ function blankEntry() {
     id: uid(), numero: null, ejemplo: false, savedAt: null,
     turno: null, fecha: toLocalInput(new Date()), jefe: '', subrogante: '',
     moviles: [0,1,2,3].map(() => ({id:'', r:'', pm:'', c:'', radios:['', '', '']})),
-    est: {encargado:'', siniestros:null, faf:null},
+    est: {encargado:'', siniestros:null, incTipo:'', incDet:'', faf:null, fafNombre:'', fafEnviado:null},
     radios: {cargadas:null, base:'', llamado:'', registro:[0,1,2].map(() => ({func:'', num:'', ent:false})), propias:''},
     oxigeno: {g:'', p:'', vacios:''},
     reserva: {},
@@ -1108,6 +1113,9 @@ function cbx(path, role, aria, short) {
   return `<div class="cbx" data-role="${role}"${short ? ' data-short="1"' : ''}><input type="text" id="${fid(path)}" data-bind="${path}" data-staff="${role}" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder=" " aria-label="${esc(aria)}" role="combobox" aria-expanded="false" aria-autocomplete="list"><button type="button" class="cbx-clr" data-act="cbxClear" tabindex="-1" aria-label="Borrar">×</button><button type="button" class="cbx-btn" data-act="cbxToggle" tabindex="-1" aria-label="Ver lista de funcionarios">▾</button><div class="cbx-list" role="listbox" hidden></div></div>`;
 }
 const staffField = (path, label, role = 'all') => `<div class="fld"><label class="lbl" for="${fid(path)}">${label}</label>${cbx(path, role, label)}</div>`;
+const INC_TIPOS = ['Ambulancia', 'Equipos', 'Dependencia física'];
+const MAIL_JEF_DEFAULT = 'e.turnosamu@gmail.com';
+const mailJef = () => String((store.settings && store.settings.mailJef) || MAIL_JEF_DEFAULT).trim();
 const cond = (path, val, inner) => `<div class="cond" data-show="${path}=${val}" hidden>${inner}</div>`;
 function card(id, title, body, sub = '') {
   return `<section class="sec" id="${id}" data-g="${SEC_G[id] || ''}" aria-labelledby="h-${id}"><header class="sec-h"><div><h2 id="h-${id}">${title}</h2>${sub ? `<p class="sub" id="sub-${id}">${sub}</p>` : ''}</div><span class="pill" data-status="${id}"></span></header><div class="sec-b">${body}</div></section>`;
@@ -1243,7 +1251,10 @@ function renderForm(e) {
         <div class="etile"><span>Vacíos por recargar</span>${stepper('oxigeno.vacios', 'Cilindros vacíos por recargar')}</div>
       </div>`, `Cilindros llenos en base. Si quedan menos de ${O2_MIN} de cualquiera de los dos, queda como novedad para pedir recarga.`),
     `<div class="duo">` +
-    card('s-estadistica', 'Estadística', `<div class="ynlist">${yn('est.siniestros', 'Siniestros durante el turno', 'SI')}${yn('est.faf', 'Notificación FAF', '')}</div>`) +
+    card('s-estadistica', 'Estadística', `<div class="ynlist">
+        <div class="ynblock">${yn('est.siniestros', 'Siniestros durante el turno', 'SI')}${cond('est.siniestros', 'SI', `<div class="fld inc"><span class="lbl" id="q-inctipo">Incidente</span>${seg('est.incTipo', INC_TIPOS, '', 'q-inctipo')}</div>${inp('est.incDet', 'Detalle del incidente')}`)}</div>
+        <div class="ynblock">${yn('est.faf', 'Notificación FAF', '')}${cond('est.faf', 'SI', `${staffField('est.fafNombre', 'Nombre del funcionario (FAF)')}<div class="fafmail"><span class="lbl">Avisar a jefatura</span><div class="srow"><button type="button" class="btn sm primary" data-act="fafMail" data-via="gmail">Enviar correo con Gmail</button><button type="button" class="btn sm" data-act="fafMail" data-via="app">Otra app de correo</button></div><small class="muted" id="fafSent">${e.est.fafEnviado ? 'Correo preparado a las ' + hmOf(e.est.fafEnviado) + ' para ' + esc(mailJef()) : 'Se envía a ' + esc(mailJef())}</small></div>`)}</div>
+      </div>`) +
     card('s-extricacion', 'Material de extricación', `${staffField('extr.encargado', 'Encargado (PM)', 'PM')}
       <div class="ynlist">
         <div class="ynblock">${yn('extr.guardar', 'Pendiente guardar', 'SI')}${cond('extr.guardar', 'SI', inp('extr.guardarLugar', 'Lugar'))}</div>
@@ -1315,7 +1326,9 @@ function sectionMissing(e) {
   });
   need('s-moviles', anyMovil, 'Al menos un móvil con tripulación');
   need('s-estadistica', filled(e.est.siniestros), 'Siniestros durante el turno');
+  if (e.est.siniestros === 'SI') need('s-estadistica', filled(e.est.incTipo), 'Tipo de incidente');
   need('s-estadistica', filled(e.est.faf), 'Notificación FAF');
+  if (e.est.faf === 'SI') need('s-estadistica', filled(e.est.fafNombre), 'Nombre del funcionario FAF');
   need('s-radios', filled(e.radios.cargadas), 'Radios cargadas');
   need('s-radios', filled(e.radios.base), 'Nº de radios en base');
   need('s-radios', filled(e.radios.llamado), 'Nº de radios en llamado');
@@ -1389,7 +1402,8 @@ function alertsOf(e, opts = {}) {
     const uniq = [...new Set(arr)];
     add('warn', 's-moviles', uniq.length === 1 ? `Radio ${r} está repetida en ${movName(e, uniq[0])}` : `Radio ${r} está asignada a ${uniq.map(i => movName(e, i)).join(' y ')}`);
   });
-  if (e.est.siniestros === 'SI') add('warn', 's-estadistica', 'Hubo siniestros durante el turno');
+  if (e.est.siniestros === 'SI') add('warn', 's-estadistica', `Siniestro durante el turno${filled(e.est.incTipo) ? ': incidente en ' + (e.est.incTipo === 'Dependencia física' ? 'dependencia física' : e.est.incTipo.toLowerCase()) : ''}${filled(e.est.incDet) ? ' · ' + e.est.incDet : ''}`);
+  if (e.est.faf === 'SI' && !e.est.fafEnviado) add('warn', 's-estadistica', `Notificación FAF${filled(e.est.fafNombre) ? ' de ' + e.est.fafNombre : ''}: falta enviar el correo a jefatura`);
   if (e.radios.cargadas === 'NO') add('warn', 's-radios', 'Radios sin cargar');
   [['g', '1 m³'], ['p', '0,5 m³']].forEach(([k, n]) => {
     const v = num((e.oxigeno || {})[k]);
@@ -1972,7 +1986,7 @@ async function buildPdf(e) {
   sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
   const x = e.extr, b = e.bodega, sq = e.salaeq;
   sec('Revisión de áreas', {head:[['Área', 'Encargado', 'Detalle']], body:cl([
-    ['Estadística', '', `Siniestros durante el turno: ${yn2(e.est.siniestros)}\nNotificación FAF: ${yn2(e.est.faf)}`],
+    ['Estadística', '', `Siniestros durante el turno: ${yn2(e.est.siniestros)}${e.est.siniestros === 'SI' && e.est.incTipo ? ' · Incidente: ' + e.est.incTipo + (e.est.incDet ? ' (' + e.est.incDet + ')' : '') : ''}\nNotificación FAF: ${yn2(e.est.faf)}${e.est.faf === 'SI' && e.est.fafNombre ? ' · ' + e.est.fafNombre + (e.est.fafEnviado ? ' · correo a jefatura ' + hmOf(e.est.fafEnviado) : '') : ''}`],
     ['Radios', '', `Cargadas: ${yn2(e.radios.cargadas)} · En base: ${e.radios.base || '-'} · En llamado: ${e.radios.llamado || '-'}${filled(e.radios.propias) ? '\nRadios propias: ' + e.radios.propias : ''}`],
     ['Material de extricación', x.encargado, `Pendiente guardar: ${yn2(x.guardar)}${x.guardar === 'SI' && x.guardarLugar ? ' (' + x.guardarLugar + ')' : ''}\nPendiente por rescatar: ${yn2(x.rescatar)}${x.rescatar === 'SI' && x.rescatarLugar ? ' (' + x.rescatarLugar + ')' : ''}\nPendiente reponer: ${yn2(x.reponer)}${x.reponer === 'SI' && x.reponerDet ? ' (' + x.reponerDet + ')' : ''}`],
     ['Bodega diaria', b.encargado, `${tPdf(e, 'bodega')}\nLimpia y ordenada: ${yn2(b.limpia)} · Pendiente reponer: ${yn2(b.reponer)}${filled(b.obs) ? '\nObservaciones: ' + b.obs : ''}`],
@@ -2338,6 +2352,19 @@ const actions = {
       <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Seguir editando</button><button type="button" class="btn primary" data-act="confirmSave">${list.length ? 'Guardar de todas formas' : 'Guardar entrega'}</button></div>`);
   },
   verSolo() { enterTest(); },
+  fafMail(a) {
+    if (isRO()) return;
+    const e = store.draft, x = e.est;
+    if (!filled(x.fafNombre)) { toast('Escribe primero el nombre del funcionario'); const f = document.getElementById(fid('est.fafNombre')); if (f) f.focus(); return; }
+    const to = mailJef();
+    const subj = `Notificación FAF · ${x.fafNombre} · ${fmtDate(e.fecha)}`;
+    const body = `Estimada jefatura:\n\nSe informa una notificación FAF durante el turno.\n\nFuncionario: ${x.fafNombre}\nFecha y hora: ${fmtDate(e.fecha)}${e.turno ? '\nTurno: ' + e.turno.toLowerCase() : ''}\nEntrega: ${folio(store.settings.nextNum)}${SES ? '\nInforma: ' + sesLabel() : ''}\n\nSAMU 131 Magallanes · Entrega de turno`;
+    const q = s2 => encodeURIComponent(s2);
+    if (a.dataset.via === 'gmail') window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${q(to)}&su=${q(subj)}&body=${q(body)}`, '_blank', 'noopener');
+    else location.href = `mailto:${to}?subject=${q(subj)}&body=${q(body)}`;
+    x.fafEnviado = new Date().toISOString(); schedulePersist(); refresh();
+    const s3 = $('#fafSent'); if (s3) s3.textContent = `Correo preparado a las ${hmOf(x.fafEnviado)} para ${to}. Revisa que se haya enviado.`;
+  },
   async diskSave() {
     if (isRO()) return;
     const b = $('#topDisk'); persist();
@@ -2684,6 +2711,7 @@ const actions = {
         <label class="fld" for="setNum"><span class="lbl">Nº de la próxima entrega</span><input type="text" inputmode="numeric" id="setNum" value="${S.nextNum}"></label>
         <label class="fld" for="setRad"><span class="lbl">Radios disponibles (1 a …)</span><input type="text" inputmode="numeric" id="setRad" value="${S.nRadios || 20}"></label>
         <label class="fld" for="setCrit"><span class="lbl">Alerta roja de stock (% que queda)</span><input type="text" inputmode="numeric" id="setCrit" value="${critPct()}"></label>
+        <label class="fld" for="setMailJef"><span class="lbl">Correo de jefatura (avisos FAF)</span><input type="email" id="setMailJef" value="${esc(mailJef())}" autocomplete="off"></label>
       </div>
       <p class="muted">Usa el Nº para seguir la numeración del talonario en papel.</p>
       <div class="srow"><button type="button" class="btn sm" data-act="numReset">Reiniciar numeración (próxima: Nº 000001)</button>${SES && SES.admin ? '<button type="button" class="btn sm danger" data-act="draftWipe" title="Deja en blanco la entrega en curso, en todos los computadores y en el TV">Borrar todo (entrega en curso)</button>' : ''}</div>
@@ -2728,7 +2756,9 @@ const actions = {
     if (!(nr >= 1 && nr <= 200)) { toast('La cantidad de radios debe estar entre 1 y 200'); return; }
     const cp = parseInt($('#setCrit').value, 10);
     if (!(cp >= 0 && cp <= 90)) { toast('La alerta roja debe estar entre 0 y 90 %'); return; }
-    Object.assign(store.settings, {rMin:mn, rMax:mx, nextNum:n, nRadios:nr, stockCrit:cp}); persist(); closeSheet(); renderAll(); toast('Ajustes guardados');
+    const mj = (($('#setMailJef') || {}).value || '').trim();
+    if (mj && !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(mj)) { toast('Revisa el correo de jefatura'); return; }
+    Object.assign(store.settings, {rMin:mn, rMax:mx, nextNum:n, nRadios:nr, stockCrit:cp, mailJef:mj || MAIL_JEF_DEFAULT}); persist(); closeSheet(); renderAll(); toast('Ajustes guardados');
   },
   async sendLocalFile(a) {
     const to = (($('#lfMail') || {}).value || '').trim();
@@ -3216,7 +3246,7 @@ async function accesosSheet() {
    Cada computador manda solo lo que cambió (campo por campo) y recibe lo que cambiaron los demás.
    Si dos personas escriben el mismo campo a la vez, queda lo último que llegó. */
 const SYNC_KEY = 'samu-entrega-turno-sync';
-const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin'];
+const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin','mailJef'];
 const SY = {started:false, rev:null, base:null, busy:false, again:false, soonT:null, tick:null, n:0, last:null, err:'', noScript:false, act:0, adopting:false};
 const clone = o => o === undefined ? undefined : JSON.parse(JSON.stringify(o));
 const stab = o => JSON.stringify(o, (k, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((r, k2) => (r[k2] = v[k2], r), {}) : v);
