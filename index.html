@@ -1025,7 +1025,7 @@ const cur = () => view.mode === 'draft' ? store.draft : (store.history.find(h =>
 /* permisos: T jefes de turno (T1 a T4), J jefatura (MJ, SA) y administrador editan todo, novedades incluidas;
    A ambulancias solo el estado de los móviles; el resto (enlace de prueba, reanimadores) solo mira */
 /* reanimador con clave propia: el primero que entra en el turno queda a cargo de la entrega y es el único que la edita */
-const isRea = () => !!(SES && SES.token && !SES.prueba && SES.code !== 'PRUEBA' && !SES.admin && SES.rol !== 'J' && SES.rol !== 'A' && /^R\d+$/i.test(SES.code || ''));
+const isRea = () => !!(SES && SES.token && !SES.prueba && SES.code !== 'PRUEBA' && SES.rol !== 'J' && SES.rol !== 'A' && /^R\d+$/i.test(SES.code || ''));
 const encOf = e => (e && e.enc && e.enc.code) ? e.enc : null;
 const sameCode = (a, b) => String(a || '').toUpperCase() === String(b || '').toUpperCase();
 const isEnc = () => { const en = encOf(store.draft); return !!(isRea() && en && sameCode(en.code, SES.code)); };
@@ -3001,6 +3001,8 @@ function renderAll() {
 const SES_KEY = 'samu-entrega-sesion', OFF_KEY = 'samu-entrega-offline', TV_KEY = 'samu-entrega-tv';
 const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora asistencial', T1:'Turno 1', T2:'Turno 2', T3:'Turno 3', T4:'Turno 4', AMB:'Encargado de ambulancias'};
 let SES = null, loginBusy = false, claimAfterLogin = false;
+/* por ahora solo entran los reanimadores (y AMB); estos códigos quedan desactivados, pero sus claves siguen guardadas en Google */
+const BLOQ = ['T1', 'T2', 'T3', 'T4', 'MJ', 'SA'];
 const TEST_TOK = 'samu-entrega-prueba';
 const URL_KEY = (() => { try { return new URLSearchParams(location.search).get('k') || ''; } catch (e) { return ''; } })();
 function testTokObj() { try { const t = JSON.parse(localStorage.getItem(TEST_TOK) || 'null'); return t && t.exp > Date.now() && (!URL_KEY || t.k === URL_KEY) ? t : null; } catch (e) { return null; } }
@@ -3031,7 +3033,7 @@ const sesLabel = () => SES ? accLabel(SES.code, SES.rol === 'J' ? SES.nombre : '
 const sesRol = () => SES ? (SES.admin ? 'J' : SES.rol) : '';
 const needLogin = () => true;
 function loadSes() {
-  try { const v = JSON.parse(localStorage.getItem(SES_KEY) || 'null'); if (v && v.code && v.exp > Date.now()) SES = v; else localStorage.removeItem(SES_KEY); } catch (e) {}
+  try { const v = JSON.parse(localStorage.getItem(SES_KEY) || 'null'); if (v && v.code && v.exp > Date.now() && !BLOQ.includes(String(v.code).toUpperCase())) SES = v; else localStorage.removeItem(SES_KEY); } catch (e) {}
 }
 function paintUser() {
   const box = $('#userBox'); if (!box) return;
@@ -3044,8 +3046,8 @@ function showLogin(msg) {
     ${logo ? `<img src="${logo}" alt="" width="70" height="74">` : ''}
     <div class="eyebrow">SAMU 131 · Magallanes</div>
     <h2>Entrega de turno</h2>
-    <p class="muted">Reanimadores: entra con tu código (R1, R2…) y tu clave. El primero que entra en el turno queda a cargo de la entrega. Jefatura: MJ o SA. Ambulancias: AMB. Sin clave, la entrega solo se puede mirar.</p>
-    <label class="fld" for="logCode"><span class="lbl">Código</span><input type="text" id="logCode" placeholder="R7, MJ, SA o AMB" autocapitalize="characters" spellcheck="false"></label>
+    <p class="muted">Reanimadores: entra con tu código (R1, R2…) y tu clave. El primero que entra en el turno queda a cargo de la entrega. Ambulancias: AMB. Sin clave, la entrega solo se puede mirar.</p>
+    <label class="fld" for="logCode"><span class="lbl">Código</span><input type="text" id="logCode" placeholder="R7 o AMB" autocapitalize="characters" spellcheck="false"></label>
     <p class="login-who" id="logWho"></p>
     <label class="fld" for="logPin"><span class="lbl">Clave</span><input type="password" id="logPin" inputmode="numeric" maxlength="8"></label>
     <p class="login-err" id="logErr">${msg ? esc(msg) : ''}</p>
@@ -3127,6 +3129,7 @@ async function tryLogin() {
   const err = $('#logErr'), btn = $('#logBtn');
   const code = ($('#logCode').value || '').replace(/[\s·-]/g, '').toUpperCase(), pin = $('#logPin').value || '';
   if (!code || !pin) { err.textContent = 'Escribe tu código y tu clave.'; return; }
+  if (BLOQ.includes(code)) { err.textContent = 'Ese código está desactivado por ahora. Entra con tu código de reanimador (R1, R2…).'; $('#logPin').value = ''; return; }
   loginBusy = true; btn.disabled = true; btn.textContent = 'Verificando…'; err.textContent = '';
   try {
     const j = await loginCall(code, pin);
@@ -3158,7 +3161,7 @@ document.addEventListener('keydown', ev => { if ((ev.ctrlKey || ev.metaKey) && !
 document.addEventListener('input', ev => {
   if (ev.target.id !== 'logCode') return;
   const code = ev.target.value.replace(/[\s·-]/g, '').toUpperCase(), w = $('#logWho');
-  if (w) w.textContent = JEF_NOMBRE[code] || (store.settings.personal.some(x => x.clave.toUpperCase() === code) ? accLabel(code) : '');
+  if (w) w.textContent = BLOQ.includes(code) ? `${JEF_NOMBRE[code]} · desactivado por ahora` : JEF_NOMBRE[code] || (store.settings.personal.some(x => x.clave.toUpperCase() === code) ? accLabel(code) : '');
 });
 /* la sesión venció o la clave cambió en otro equipo */
 function authLost() { if (document.documentElement.classList.contains('tvmode')) return; if (SES && SES.prueba) { try { localStorage.removeItem(TEST_TOK); } catch (e) {} } if (SES) logout('Tu sesión venció o tu clave cambió. Vuelve a entrar.'); }
@@ -3177,8 +3180,7 @@ async function accesosSheet() {
     ${a.tiene && code !== (SES && SES.code) ? `<button type="button" class="xbtn" data-act="accDel" data-code="${esc(code)}" aria-label="Quitar acceso de ${esc(code)}" title="Quitar acceso">×</button>` : '<span></span>'}</div>`; };
   openSheet(`<h2>Claves de acceso</h2>
     <p class="muted">Las claves se guardan en Google, nunca en este archivo. Cada persona entra con su código y su clave (4 a 8 números). Al cambiar una clave, esa persona debe volver a entrar en todos sus equipos.</p>
-    <h3>Jefatura (editan todo)</h3><div class="acclist">${['MJ', 'SA'].map(c => row(c, '', true)).join('')}</div>
-    <h3>Códigos de turno T1 a T4 (solo miran)</h3><div class="acclist">${['T1', 'T2', 'T3', 'T4'].map(c => row(c, '', true)).join('')}</div>
+    <p class="muted">MJ, SA y T1 a T4 están desactivados por ahora: no pueden entrar, pero sus claves siguen guardadas en Google por si se vuelven a activar.</p>
     <h3>Ambulancias (solo estado de móviles)</h3><div class="acclist">${row('AMB', '', true)}</div>
     <h3>Reanimadores (el primero que entra en el turno queda a cargo de la entrega)</h3><div class="acclist">${reas.map(p => row(p.clave.toUpperCase(), titleCase(p.nombre) + (p.sup ? ' (suplente)' : ''), false)).join('')}</div>
     <div class="sheet-act"><button type="button" class="btn" data-act="settings">Volver a Ajustes</button><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>`, 'wide');
