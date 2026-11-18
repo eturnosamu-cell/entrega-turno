@@ -2374,6 +2374,27 @@ const actions = {
   logout() { if (SES && SES.code === 'PRUEBA') { SES = null; try { localStorage.removeItem(SES_KEY); } catch (e) {} paintUser(); showLogin(); return; } logout(); },
   useKey() { pickerOpen = false; showLogin(); },
   accesos() { accesosSheet(); },
+  async accBulk(a) {
+    const ta = $('#accBulk'); if (!ta) return;
+    const items = [], bad = [];
+    (ta.value || '').split(/\r?\n/).forEach(l => {
+      const t = l.replace(/[|·:;,\t]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!t || !/\d/.test(t)) return;
+      const m = t.match(/^(R\d+|AMB)\s+(\d{4,8})$/i);
+      if (m) items.push([m[1].toUpperCase(), m[2]]); else bad.push(t);
+    });
+    if (!items.length) { toast('No encontré líneas con código y clave, por ejemplo «R1 5216».'); return; }
+    a.disabled = true; const ok = [];
+    for (let i = 0; i < items.length; i++) {
+      const [code, v] = items[i];
+      a.textContent = `Guardando ${i + 1} de ${items.length}…`;
+      try { await syncPost({action:'accSet', code, ph:pinHash(v)}); ok.push(code); }
+      catch (e) { bad.push(`${code} (no se pudo guardar${e && e.detail ? ': ' + e.detail : ''})`); }
+    }
+    ta.value = '';
+    openSheet(`<h2>Claves guardadas</h2><p>${ok.length ? `Quedaron guardadas en Google ${ok.length} clave${ok.length > 1 ? 's' : ''}: ${ok.map(esc).join(', ')}.` : 'No se guardó ninguna clave.'}</p>${bad.length ? `<div class="sblock warn"><h3>Revisar</h3><ul>${bad.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+      <div class="sheet-act"><button type="button" class="btn primary" data-act="accesos">Volver a Claves de acceso</button><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>`);
+  },
   async accSet(a) {
     const code = a.dataset.code, inp = document.querySelector(`[data-accpin="${CSS.escape(code)}"]`), v = (inp.value || '').trim();
     if (!/^\d{4,8}$/.test(v)) { toast('La clave debe tener de 4 a 8 números'); inp.focus(); return; }
@@ -3033,7 +3054,7 @@ const sesLabel = () => SES ? accLabel(SES.code, SES.rol === 'J' ? SES.nombre : '
 const sesRol = () => SES ? (SES.admin ? 'J' : SES.rol) : '';
 const needLogin = () => true;
 function loadSes() {
-  try { const v = JSON.parse(localStorage.getItem(SES_KEY) || 'null'); if (v && v.code && v.exp > Date.now() && !BLOQ.includes(String(v.code).toUpperCase())) SES = v; else localStorage.removeItem(SES_KEY); } catch (e) {}
+  try { const v = JSON.parse(localStorage.getItem(SES_KEY) || 'null'); if (v && v.code && v.exp > Date.now() && (v.admin || !BLOQ.includes(String(v.code).toUpperCase()))) SES = v; else localStorage.removeItem(SES_KEY); } catch (e) {}
 }
 function paintUser() {
   const box = $('#userBox'); if (!box) return;
@@ -3129,11 +3150,11 @@ async function tryLogin() {
   const err = $('#logErr'), btn = $('#logBtn');
   const code = ($('#logCode').value || '').replace(/[\s·-]/g, '').toUpperCase(), pin = $('#logPin').value || '';
   if (!code || !pin) { err.textContent = 'Escribe tu código y tu clave.'; return; }
-  if (BLOQ.includes(code)) { err.textContent = 'Ese código está desactivado por ahora. Entra con tu código de reanimador (R1, R2…).'; $('#logPin').value = ''; return; }
   loginBusy = true; btn.disabled = true; btn.textContent = 'Verificando…'; err.textContent = '';
   try {
     const j = await loginCall(code, pin);
     if (!j.ok) { err.textContent = LOGIN_ERR[j.error] || 'No se pudo entrar.'; $('#logPin').value = ''; return; }
+    if (BLOQ.includes(code) && !j.admin) { err.textContent = 'Ese código está desactivado por ahora. Entra con tu código de reanimador (R1, R2…).'; $('#logPin').value = ''; return; }
     SES = {code:j.code, rol:j.rol, admin:!!j.admin, nombre:j.nombre || '', token:j.token, exp:j.exp};
     /* para poder entrar en este mismo equipo si se corta internet */
     try { const off = JSON.parse(localStorage.getItem(OFF_KEY) || '{}'); off[code] = {v:pinHash('equipo:' + pin), rol:j.rol, admin:!!j.admin, nombre:j.nombre || '', at:Date.now()}; localStorage.setItem(OFF_KEY, JSON.stringify(off)); } catch (e) {}
@@ -3142,6 +3163,7 @@ async function tryLogin() {
     let off = {}; try { off = JSON.parse(localStorage.getItem(OFF_KEY) || '{}'); } catch (x) {}
     const o = off[code];
     if (!o || o.v !== pinHash('equipo:' + pin) || Date.now() - o.at > 30 * 864e5) { err.textContent = 'Sin conexión con Google. Para entrar sin internet, esta persona debe haber entrado antes en este equipo.'; return; }
+    if (BLOQ.includes(code) && !o.admin) { err.textContent = 'Ese código está desactivado por ahora. Entra con tu código de reanimador (R1, R2…).'; return; }
     SES = {code, rol:o.rol, admin:o.admin, nombre:o.nombre, token:'', exp:Date.now() + 14 * 3600e3};
   } finally { loginBusy = false; if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = 'Entrar'; } }
   try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {}
@@ -3183,6 +3205,10 @@ async function accesosSheet() {
     <p class="muted">MJ, SA y T1 a T4 están desactivados por ahora: no pueden entrar, pero sus claves siguen guardadas en Google por si se vuelven a activar.</p>
     <h3>Ambulancias (solo estado de móviles)</h3><div class="acclist">${row('AMB', '', true)}</div>
     <h3>Reanimadores (el primero que entra en el turno queda a cargo de la entrega)</h3><div class="acclist">${reas.map(p => row(p.clave.toUpperCase(), titleCase(p.nombre) + (p.sup ? ' (suplente)' : ''), false)).join('')}</div>
+    <h3>Cargar varias claves de una vez</h3>
+    <p class="muted">Pega la lista con una persona por línea: el código y la clave, por ejemplo <b>R1 5216</b>. Sirve también la tabla copiada tal cual. Se guardan todas en Google con un solo botón.</p>
+    <textarea id="accBulk" rows="7" style="width:100%;font:inherit;padding:8px;border-radius:8px" spellcheck="false" autocomplete="off" aria-label="Lista de códigos y claves"></textarea>
+    <div class="sheet-act"><button type="button" class="btn primary" data-act="accBulk">Guardar todas</button></div>
     <div class="sheet-act"><button type="button" class="btn" data-act="settings">Volver a Ajustes</button><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>`, 'wide');
 }
 
