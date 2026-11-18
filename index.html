@@ -358,6 +358,20 @@ fieldset:disabled .xbtn{visibility:hidden}
 .mr.p3{grid-template-columns:minmax(150px,2fr) repeat(2,minmax(76px,1fr)) minmax(132px,auto)}
 .mr.p4{grid-template-columns:minmax(150px,1.6fr) repeat(3,minmax(76px,1fr)) minmax(132px,auto)}
 .mr.p6{grid-template-columns:minmax(140px,1.5fr) repeat(5,minmax(66px,1fr)) minmax(124px,auto)}
+.mr.p5c{grid-template-columns:minmax(170px,1.7fr) repeat(4,minmax(70px,1fr)) 185px}
+.mr.p5c .phase2{border-left:2px solid var(--line);padding-left:10px;margin-left:-6px}
+.mr.mphase{padding-block:8px 0;background:var(--surface-2);border-top:0}
+.mr.mphase span{font:700 11px/1.2 var(--f-display);letter-spacing:.1em;text-transform:uppercase}
+.mr.mphase .ph1{grid-column:2 / span 2;color:var(--info-ink);border-bottom:2px solid var(--info-ink);padding-bottom:5px}
+.mr.mphase .ph2{grid-column:4 / span 2;color:var(--good-ink);border-bottom:2px solid var(--good-ink);padding-bottom:5px}
+.mr.mphase + .mh{border-top:0}
+.mname small b{color:var(--ink)}
+.mcell.uso input:not(:placeholder-shown){border-color:var(--info-ink);background:var(--info-soft)}
+.mcorr{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 10px;border-radius:8px;background:var(--info-soft)}
+.mcorr label{font:700 13px/1.2 var(--f-display);color:var(--info-ink)}
+.mcorr input{flex:1 1 220px;min-height:40px;font-weight:700}
+.mcorr .muted{font-size:12.5px}
+.mr[data-flag="warn"] .mcorr{background:var(--surface)}
 .mcell.repo input{border-color:var(--good);background:var(--good-soft)}
 .mcell.repo input:placeholder-shown{border-color:var(--line);background:var(--field)}
 .mr:first-child{border-top:0}
@@ -379,7 +393,9 @@ fieldset:disabled .xbtn{visibility:hidden}
 .mr[data-flag="crit"]{background:var(--crit-soft)}
 .mr[data-flag="warn"]{background:var(--warn-soft)}
 @media (max-width:720px){
-  .mr,.mr.p3,.mr.p4,.mr.p6{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:8px}
+  .mr,.mr.p3,.mr.p4,.mr.p6,.mr.p5c{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:8px}
+  .mr.mphase{display:none}
+  .mr.p5c .phase2{border-left:0;padding-left:0;margin-left:0}
   .mname,.mstat{grid-column:1/-1}
   .mh{display:none}
   .mcell .mlbl{display:block}
@@ -1320,12 +1336,13 @@ function genTiles(e) {
 }
 function renderForm(e) {
   const S = store.settings;
-  const ctrlRows = e.controlados.map((c, i) => `<div class="mr p6" data-ctrl="${i}">
-      <span class="mname">${esc(c.name)}<small data-prev="${i}"></small></span>
-      ${mcell(`controlados.${i}.ent`, 'Entregada')}${mcell(`controlados.${i}.rec`, 'Recibida')}
-      ${mcell(`controlados.${i}.repo`, 'Repuesta').replace('class="mcell"', 'class="mcell repo"').replace('<input ', '<input placeholder=" " ')}
-      ${mcell(`controlados.${i}.corr`, 'Nº correlativo', 'numeric', '')}${mcell(`controlados.${i}.uso`, 'Utilizada')}
-      <span class="mstat" data-cstat="${i}"></span></div>`).join('');
+  const ctrlRows = e.controlados.map((c, i) => `<div class="mr p5c" data-ctrl="${i}">
+      <span class="mname">${esc(c.name)}<small data-cini="${i}"></small><small data-prev="${i}"></small></span>
+      ${mcell(`controlados.${i}.uso`, 'Utilizada en el turno').replace('class="mcell"', 'class="mcell uso"').replace('<input ', '<input placeholder="0" ')}
+      ${mcell(`controlados.${i}.repo`, 'Repuesta por farmacia').replace('class="mcell"', 'class="mcell repo"').replace('<input ', '<input placeholder="0" ')}
+      ${mcell(`controlados.${i}.ent`, 'Entregada al cierre').replace('class="mcell"', 'class="mcell phase2"')}${mcell(`controlados.${i}.rec`, 'Recibida por el turno entrante')}
+      <span class="mstat" data-cstat="${i}"></span>
+      <div class="mcorr" data-corr="${i}" hidden><label for="${fid(`controlados.${i}.corr`)}">Nº correlativo de lo utilizado</label><input id="${fid(`controlados.${i}.corr`)}" type="text" inputmode="decimal" data-bind="controlados.${i}.corr" autocomplete="off" placeholder="Ej. 1234 (si son varios: 1234, 1235)"><span class="muted">Obligatorio cuando se utiliza</span></div></div>`).join('');
   const parRows = e.parches.map((p, i) => `<div class="mr p4" data-par="${i}">
       <span class="mname">${esc(p.name)}<small data-pprev="${i}"></small></span>
       ${mcell(`parches.${i}.ent`, 'Entregada')}${mcell(`parches.${i}.rec`, 'Recibida')}${mcell(`parches.${i}.uso`, 'Utilizada')}
@@ -1387,9 +1404,10 @@ function renderForm(e) {
         <div class="mr p4 mh" aria-hidden="true"><span>Parche</span><span>Entregada</span><span>Recibida</span><span>Utilizada del turno</span><span>Estado</span></div>
         ${parRows}</div>`, 'Máscara laríngea, trocar y parches de marcapaso y DEA.'),
     card('s-controlados', 'Medicamentos controlados', `<div class="mt">
-        <div class="mr p6 mh" aria-hidden="true"><span>Medicamento</span><span>Entregada</span><span>Recibida</span><span>Repuesta en el turno</span><span>Nº correlativo utilizado</span><span>Utilizada del turno</span><span>Estado</span></div>
+        <div class="mr p5c mphase" aria-hidden="true"><span></span><span class="ph1">Durante el turno</span><span class="ph2">Al entregar (cuentan ambos)</span><span></span></div>
+        <div class="mr p5c mh" aria-hidden="true"><span>Medicamento</span><span>Utilizada</span><span>Repuesta</span><span class="phase2">Entregada</span><span>Recibida</span><span>Estado</span></div>
         ${ctrlRows}</div>
-      ${ta('ctrlObs', 'Observaciones de controlados (reposición: quién entrega, Nº de receta o acta)', 2)}`, 'Entregada y recibida deben coincidir. Si hubo uso, registra el Nº correlativo. Si farmacia repuso, anota la cantidad en Repuesta y el detalle en observaciones.'),
+      ${ta('ctrlObs', 'Observaciones de controlados (reposición: quién entrega, Nº de receta o acta)', 2)}`, 'Primero lo que pasó en el turno: lo utilizado (con su Nº correlativo) y lo que repuso farmacia. Al entregar, quien entrega y quien recibe cuentan: Entregada y Recibida deben coincidir. Bajo cada fármaco se muestra la cuenta: lo recibido al empezar + lo repuesto − lo utilizado.'),
     card('s-generales', 'Otros medicamentos e insumos', `<div class="gtools">
         <input type="search" id="genQ" placeholder="Buscar medicamento" aria-label="Buscar medicamento" autocomplete="off">
         <label class="chk"><input type="checkbox" id="genUsed"> Solo con uso</label>
@@ -1493,11 +1511,14 @@ function alertsOf(e, opts = {}) {
     e.controlados.forEach(c => { const i = stockInfo(c.name), en = num(c.ent); if (i && en != null && en !== i.proj) add('warn', 's-controlados', `${c.name}: se entregan ${en} y el stock calculado es ${i.proj}`); });
   }
   const repCtrl = e.controlados.filter(c => (num(c.repo) || 0) > 0);
+  const prevC = prevOf(e);
   if (repCtrl.length) add('info', 's-controlados', `Reposición de controlados: ${repCtrl.map(c => `${c.name} +${num(c.repo)}`).join(', ')}${filled(e.ctrlObs) ? ' (' + e.ctrlObs.trim().slice(0, 120) + ')' : ''}`);
   e.controlados.forEach(c => {
     const en = num(c.ent), re = num(c.rec), u = num(c.uso);
     if (en != null && re != null && en !== re) { const d = re - en; add('crit', 's-controlados', `${c.name}: se entregan ${en} y se reciben ${re} (diferencia ${d > 0 ? '+' : ''}${d})`); }
     if (u > 0 && !filled(c.corr)) add('warn', 's-controlados', `${c.name}: ${u} utilizado(s) sin Nº correlativo`);
+    const k = ctrlCuenta(c, prevC);
+    if (en != null && k && en !== k.esperado) add('warn', 's-controlados', `${c.name}: se entregan ${en}, pero la cuenta da ${k.esperado} (recibidas ${k.ini}${num(c.repo) ? ' + repuestas ' + num(c.repo) : ''}${u ? ' − utilizadas ' + u : ''})`);
   });
   const r = e.refri, mo = num(r.momento), mx = num(r.max), mn = num(r.min);
   if (mo != null && (mo < S.rMin || mo > S.rMax)) add('crit', 's-refri', `Refrigerador a ${fmtT(mo)} °C ahora, fuera del rango +${S.rMin} a +${S.rMax} °C`);
@@ -1548,6 +1569,11 @@ function statusOf(id, miss, al, e) {
   if (id === 's-novedades') { const n = novItems(e).length; return n ? {cls:'done', text:`${n} novedad${n > 1 ? 'es' : ''}`} : filled(e.novedades) ? {cls:'done', text:'Registrado'} : {cls:'opt', text:'Opcional'}; }
   if (miss[id]) return {cls:'todo', text:`Faltan ${miss[id].length}`};
   return {cls:'done', text:'Completo'};
+}
+function ctrlCuenta(c, prev) {
+  const p = prev && (prev.controlados || []).find(x => x.name === c.name), ini = p ? num(p.rec) : null;
+  if (ini == null) return null;
+  return {ini, esperado: ini + (num(c.repo) || 0) - (num(c.uso) || 0)};
 }
 function prevOf(e) {
   const list = store.history.filter(h => h.id !== e.id && String(h.fecha) < String(e.fecha || '9999'));
@@ -1678,15 +1704,19 @@ function refresh() {
   e.controlados.forEach((c, i) => {
     const row = $(`[data-ctrl="${i}"]`); if (!row) return;
     const en = num(c.ent), re = num(c.rec), u = num(c.uso);
-    const stEl = $(`[data-cstat="${i}"]`);
+    const stEl = $(`[data-cstat="${i}"]`), k = ctrlCuenta(c, prev);
+    const icW = '<i class="ic" style="background:var(--warn);color:var(--on-warn)">!</i>';
     let flag = '';
-    if (en != null && re != null) {
-      if (en === re) stEl.innerHTML = `<i class="ic">✓</i>Cuadra`, stEl.className = 'mstat ok';
-      else { const d = re - en; stEl.innerHTML = `<i class="ic" style="background:var(--crit);color:var(--on-status)">!</i>Diferencia ${d > 0 ? '+' : ''}${d}`; stEl.className = 'mstat crit'; flag = 'crit'; }
-    } else { stEl.innerHTML = `<i class="ic">·</i>Por contar`; stEl.className = 'mstat muted'; }
-    if (!flag && u > 0 && !filled(c.corr)) { stEl.innerHTML = `<i class="ic" style="background:var(--warn);color:var(--on-warn)">!</i>Falta Nº correlativo`; stEl.className = 'mstat warn'; flag = 'warn'; }
+    if (en != null && re != null && en !== re) { const d = re - en; stEl.innerHTML = `<i class="ic" style="background:var(--crit);color:var(--on-status)">!</i>Diferencia ${d > 0 ? '+' : ''}${d}`; stEl.className = 'mstat crit'; flag = 'crit'; }
+    else if (u > 0 && !filled(c.corr)) { stEl.innerHTML = `${icW}Falta Nº correlativo`; stEl.className = 'mstat warn'; flag = 'warn'; }
+    else if (en != null && k && en !== k.esperado) { stEl.innerHTML = `${icW}La cuenta da ${k.esperado}`; stEl.className = 'mstat warn'; flag = 'warn'; }
+    else if (en != null && re != null) { stEl.innerHTML = `<i class="ic">✓</i>Cuadra`; stEl.className = 'mstat ok'; }
+    else { stEl.innerHTML = `<i class="ic">·</i>Por contar`; stEl.className = 'mstat muted'; }
     row.dataset.flag = flag;
-    stockHint($(`[data-prev="${i}"]`), c.name, prev && prev.controlados.find(x => x.name === c.name));
+    const cr = $(`[data-corr="${i}"]`); if (cr) cr.hidden = !(u > 0 || filled(c.corr));
+    const ci = $(`[data-cini="${i}"]`);
+    if (ci) ci.innerHTML = k ? `Al empezar: <b>${k.ini}</b> · la cuenta da <b>${k.esperado}</b>` : '';
+    stockHint($(`[data-prev="${i}"]`), c.name, k ? null : prev && prev.controlados.find(x => x.name === c.name));
   });
   e.parches.forEach((p, i) => {
     const row = $(`[data-par="${i}"]`); if (!row) return;
