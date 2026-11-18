@@ -574,6 +574,111 @@ fieldset:disabled .cbx-btn,fieldset:disabled .cbx-clr{display:none}
 .cbx-none{margin:0;padding:10px;color:var(--ink-3);font-size:14px}
 .crew .cbx{flex:1}
 
+/* stock: vista nueva */
+.stk{display:flex;flex-direction:column;gap:14px}
+.stk-head h2{margin:0 0 4px}
+.stk-head p{margin:0}
+.stk-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.kpi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:inherit;color:inherit;border-left-width:6px;transition:transform .12s,box-shadow .12s}
+.kpi:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.kpi b{font:800 30px/1.05 var(--f-display)}
+.kpi span{font:700 14px/1.2 var(--f-display)}
+.kpi small{font-size:12.5px;color:var(--ink-3)}
+.kpi.crit{border-left-color:var(--crit)}.kpi.crit b{color:var(--crit-ink)}
+.kpi.warn{border-left-color:var(--warn)}.kpi.warn b{color:var(--warn-ink)}
+.kpi.good{border-left-color:var(--good)}.kpi.good b{color:var(--good-ink)}
+.kpi.info{border-left-color:var(--accent)}.kpi.info b{font-size:24px}
+.kpi.info i{font-style:normal}
+.kpi.on{box-shadow:0 0 0 2px var(--accent)}
+.kpi.crit.on{background:var(--crit-soft)}.kpi.warn.on{background:var(--warn-soft)}.kpi.good.on{background:var(--good-soft)}.kpi.info.on{background:var(--accent-soft)}
+.stk i.plus,.stk span.plus{color:var(--good-ink)}.stk i.minus,.stk span.minus{color:var(--crit-ink)}.stk span.eq{color:var(--info-ink)}
+.stk-tabs{display:flex;gap:4px;border-bottom:2px solid var(--line-2)}
+.stab{border:0;background:none;font:700 15px/1 var(--f-display);padding:11px 16px;color:var(--ink-3);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;border-radius:8px 8px 0 0}
+.stab:hover{background:var(--surface-2);color:var(--ink)}
+.stab.on{color:var(--ink);border-bottom-color:var(--accent)}
+.stools{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
+.stools input[type="search"]{width:100%;min-height:44px}
+.fchips{display:flex;flex-wrap:wrap;gap:6px}
+.fchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font:600 13.5px/1 var(--f-display);color:var(--ink-2);cursor:pointer}
+.fchip:hover{background:var(--surface-2)}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.fchip[data-v="out"]:not(.on){color:var(--crit-ink)}.fchip[data-v="low"]:not(.on){color:var(--warn-ink)}.fchip[data-v="ok"]:not(.on){color:var(--good-ink)}
+.sgroup h3{margin:14px 0 8px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-items:start}
+.sitem{display:flex;flex-direction:column;gap:7px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);border-top:4px solid var(--good)}
+.sitem[data-st="low"]{border-top-color:var(--warn)}
+.sitem[data-st="out"]{border-top-color:var(--crit);background:linear-gradient(180deg,var(--crit-soft),var(--surface) 70%)}
+.sitem[data-st="none"]{border-top-color:var(--line);border-style:dashed}
+.sitem.open{grid-column:1/-1;box-shadow:0 6px 22px rgba(0,0,0,.10)}
+.sitem-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.sitem-name{font:700 16px/1.25 var(--f-display);display:flex;flex-direction:column;gap:3px;min-width:0}
+.sgrp{font:600 11px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.sgrp.g-ctrl{color:#7a3fb0}
+.schip{font:700 11.5px/1 var(--f-display);letter-spacing:.05em;text-transform:uppercase;padding:6px 9px;border-radius:999px;white-space:nowrap;flex:none}
+.schip.ok{background:var(--good-soft);color:var(--good-ink)}
+.schip.low{background:var(--warn-soft);color:var(--warn-ink)}
+.schip.out{background:var(--crit);color:#fff}
+.schip.none{background:var(--surface-2);color:var(--ink-3)}
+.sqty{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.sqty>b{font:800 34px/1 var(--f-display)}
+.sqty small b{font-weight:800;color:var(--ink)}
+.sqty>span{font:600 16px/1 var(--f-display);color:var(--ink-3)}
+.sqty small{margin-left:auto;font-size:13px;color:var(--ink-2)}
+.sitem[data-st="out"] .sqty>b{color:var(--crit-ink)}
+.sitem[data-st="low"] .sqty>b{color:var(--warn-ink)}
+.sbar{position:relative;height:10px;border-radius:6px;background:var(--surface-2);overflow:visible}
+.sbar i{display:block;height:100%;border-radius:6px;background:var(--good);transition:width .35s}
+.sitem[data-st="low"] .sbar i{background:var(--warn)}
+.sitem[data-st="out"] .sbar i{background:var(--crit)}
+.sbar em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-2);border-radius:1px;opacity:.55}
+.smeta,.slast{font-size:13px;color:var(--ink-3)}
+.slast span{font-weight:700}
+.sacts{display:flex;gap:6px;margin-top:2px}
+.sbtn{flex:1 1 auto;white-space:nowrap;min-height:40px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font:700 13.5px/1 var(--f-display);cursor:pointer;color:var(--ink);padding:0 8px}
+.sbtn:hover{background:var(--surface-2)}
+.sbtn.out{color:var(--crit-ink)}.sbtn.out.on,.sbtn.out:active{background:var(--crit);color:#fff;border-color:var(--crit)}
+.sbtn.in{color:var(--good-ink)}.sbtn.in.on,.sbtn.in:active{background:var(--good-ink);color:#fff;border-color:var(--good-ink)}
+.sbtn.cnt{color:var(--info-ink)}.sbtn.cnt.on{background:var(--info-ink);color:#fff;border-color:var(--info-ink)}
+.sbtn.ico{flex:0 0 40px;font-size:20px;padding:0}.sbtn.ico.on{background:var(--ink-2);color:var(--surface)}
+.sitem[data-st="none"] .sitem-name{color:var(--ink-2)}
+.snone{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}.snone .fld{width:150px}.snone p{flex:1 1 180px;margin:0;font-size:13px}
+.sform{margin-top:6px;padding:14px;border-radius:10px;background:var(--surface-2);display:flex;flex-direction:column;gap:12px;border-left:5px solid var(--accent)}
+.sform[data-mode="repo"]{border-left-color:var(--good)}
+.sform[data-mode="sal"]{border-left-color:var(--crit)}
+.sform[data-mode="conteo"]{border-left-color:var(--info-ink)}
+.sform-h{font:700 16px/1.2 var(--f-display)}
+.sform-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end}
+.sform h4{margin:4px 0 0}
+.qstep{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--field);width:max-content}
+.qstep button{width:48px;border:0;background:var(--surface);font:700 22px/1 var(--f-display);cursor:pointer;color:var(--ink)}
+.qstep button:hover{background:var(--accent-soft)}
+.qstep input{width:80px;border:0;text-align:center;font:800 22px/1 var(--f-display);min-height:48px;background:transparent}
+.sform-prev{font-size:15px;padding:9px 12px;border-radius:8px;background:var(--surface)}
+.sform-prev[data-st="ok"]{color:var(--good-ink)}
+.sform-prev[data-st="low"]{color:var(--warn-ink);background:var(--warn-soft)}
+.sform-prev[data-st="out"]{color:var(--crit-ink);background:var(--crit-soft)}
+.sform-act{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.sempty{display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center;padding:34px 10px;border:1px dashed var(--line);border-radius:12px}
+.mvday{margin:16px 0 6px;font:700 13px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.mvlist2,.mvmini{display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:10px;overflow:hidden;background:var(--surface)}
+.mvrow{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line-2)}
+.mvrow:last-child{border-bottom:0}
+.mvic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font:800 17px/1 var(--f-display)}
+.mvrow.plus .mvic{background:var(--good-soft);color:var(--good-ink)}
+.mvrow.minus .mvic{background:var(--crit-soft);color:var(--crit-ink)}
+.mvrow.eq .mvic{background:var(--info-soft);color:var(--info-ink)}
+.mvtx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mvtx b{font-weight:700;color:var(--ink)}
+.mvtx small{color:var(--ink-3);font-size:13px}
+.mvq{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.mvq b{font:800 17px/1 var(--f-display)}
+.mvrow.plus .mvq b{color:var(--good-ink)}.mvrow.minus .mvq b{color:var(--crit-ink)}.mvrow.eq .mvq b{color:var(--info-ink)}
+.mvq small{color:var(--ink-3);font-size:12px}
+.rccard{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);border-left:6px solid var(--accent);margin-bottom:12px}
+.rccard p{margin:4px 0 0}
+.rccard>div{flex:1 1 260px}
+.rccard.soft{border-left-color:var(--line);background:var(--surface-2);margin-top:14px}
+@media (max-width:560px){.sgrid{grid-template-columns:1fr}.stab{padding:10px 10px;font-size:14px}}
 /* recuento semanal */
 .rct{display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:9px;overflow:hidden}
 .rcr{display:grid;grid-template-columns:minmax(140px,1.8fr) 64px 72px 92px 86px;gap:10px;align-items:center;padding:7px 12px;border-top:1px solid var(--line-2)}
@@ -970,7 +1075,6 @@ function normalize(e) {
 
 const defaultSettings = () => ({pin:PIN_DEFAULT, rMin:2, rMax:8, nextNum:1, nRadios:20, stockCrit:10, backup:{auto:true, shareWith:''}, personal:PERSONAL_INICIAL.map(p => Object.assign({}, p)), flota:FLOTA_INICIAL.map(f => Object.assign({}, f))});
 let store = {v:2, settings:defaultSettings(), history:[], draft:null, stock:null, recuentos:[]};
-let stkOpenName = null;
 
 function migrateDraft(e) {
   const old = Array.isArray(e.generales) ? e.generales : [], used = new Set();
@@ -1009,7 +1113,7 @@ function stockInfo(name) {
   if (!it || num(it.total) == null) return null;
   const t0 = it.baseAt || '', total = num(it.total);
   let d = num(it.base) ?? total, usedSince = 0;
-  store.stock.movs.forEach(m => { if (m.name === name && m.tipo === 'repo' && m.at > t0) d += m.cant; });
+  store.stock.movs.forEach(m => { if (m.name === name && m.at > t0) { if (m.tipo === 'repo') d += num(m.cant) || 0; else if (m.tipo === 'sal') d -= num(m.cant) || 0; } });
   store.history.forEach(h => { if (!h.ejemplo && h.savedAt && h.savedAt > t0) { const u = usoEn(h, name); d += repoEn(h, name) - u; usedSince += u; } });
   const draftUse = usoEn(store.draft, name), draftRepo = repoEn(store.draft, name), proj = d - draftUse + draftRepo;
   const min = filled(it.min) ? num(it.min) : Math.floor(total * 0.25);
@@ -2567,32 +2671,46 @@ const actions = {
   stock() {
     if (!settingsUnlocked()) { pinSheet(store.settings.pin ? 'enter' : 'create', 'stock'); return; }
     settingsUntil = Date.now() + 10 * 60000;
-    stkOpenName = null;
-    openSheet(`<h2>Stock mueble de fármacos</h2>
-      <p class="muted">Cada vez que se guarda una entrega, lo utilizado se descuenta de aquí y lo repuesto de controlados se suma. Cuando farmacia repone otros medicamentos, usa <b>Reponer</b>. Los viernes, haz el <b>recuento semanal</b>. Se marca en rojo lo que queda en ${critPct()}% o menos.</p>
-      <div class="stsum" id="stSum"></div>
-      <div class="srow"><button type="button" class="btn sm primary" data-act="recuento">Recuento semanal (viernes)</button><span class="muted">${store.recuentos[0] ? `Último recuento: ${fmtDate(toLocalInput(new Date(store.recuentos[0].at)))}${store.recuentos[0].resp ? ' · ' + esc(store.recuentos[0].resp) : ''} · <button type="button" class="linkbtn" data-act="recuentoPdf" data-id="${store.recuentos[0].id}">PDF</button>` : 'Aún no hay recuentos.'}</span></div>
-      <div class="gtools"><input type="search" id="stQ" placeholder="Buscar fármaco" aria-label="Buscar fármaco" autocomplete="off"><label class="chk"><input type="checkbox" id="stLow"> Solo por reponer</label><button type="button" class="btn sm" data-act="stkFillAll">Reponer todo al total</button></div>
-      <div id="stockBody"></div>
-      <h3>Últimos movimientos</h3>
-      <div class="mvlist" id="stMovs"></div>
-      <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>`, 'wide');
+    STK.open = null; STK.mode = null; STK.tab = 'inv'; STK.mvN = 60;
+    openSheet(`<div class="stk">
+      <div class="stk-head"><h2>Stock de fármacos e insumos</h2>
+        <p class="muted">Lo usado en cada entrega se descuenta solo al guardarla. Aquí registras lo que se <b>saca</b> o se <b>repone</b> fuera de la entrega, quién lo hizo y cuánto. En rojo lo que queda en ${critPct()}% o menos.</p></div>
+      <div class="stk-kpis" id="stKpis"></div>
+      <div class="stk-tabs" role="tablist" id="stTabs"></div>
+      <div id="stkPane"></div>
+      <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>
+    </div>`, 'wide');
     renderStockBody();
   },
-  stkOpen(a) { stkOpenName = stkOpenName === a.dataset.name ? null : a.dataset.name; renderStockBody(); const r = $('#stRepo'); if (r) r.focus({preventScroll:true}); },
-  stkRepo(a) {
-    const name = a.dataset.name, c = parseInt(($('#stRepo') || {}).value, 10);
-    if (!(c > 0)) { toast('Indica cuántas unidades se repusieron'); return; }
-    store.stock.movs.push({id:uid(), at:new Date().toISOString(), name, tipo:'repo', cant:c});
-    stkOpenName = null; persist(); renderStockBody(); refresh(); toast(`${name}: +${c} al stock`);
+  stkTab(a) { STK.tab = a.dataset.t; STK.open = null; STK.mode = null; renderStockBody(); },
+  stkFilt(a) { const f = a.dataset.f; STK.tab = 'inv'; STK.filt = STK.filt === f ? 'all' : f; STK.open = null; renderStockBody(); },
+  stkChip(a) { STK[a.dataset.k] = a.dataset.v; if (a.dataset.k === 'mvT') STK.mvN = 60; renderStockBody(); },
+  stkMore() { STK.mvN += 60; renderStockBody(); },
+  stkMode(a) {
+    const n = a.dataset.name, m = a.dataset.mode;
+    if (STK.open === n && STK.mode === m) { STK.open = null; STK.mode = null; } else { STK.open = n; STK.mode = m; }
+    renderStockBody();
+    const c = $('#stkCant'); if (c) { c.focus({preventScroll:true}); c.select(); }
+    const card = $('.sitem.open'); if (card && card.scrollIntoView) card.scrollIntoView({block:'nearest', behavior:'smooth'});
   },
-  stkCount(a) {
-    const name = a.dataset.name, raw = ($('#stCount') || {}).value, c = parseInt(raw, 10);
-    if (raw === '' || !(c >= 0)) { toast('Escribe la cantidad que hay en el mueble'); return; }
-    const it = store.stock.items[name], at = new Date().toISOString();
-    it.base = c + usoEn(store.draft, name); it.baseAt = at;
-    store.stock.movs.push({id:uid(), at, name, tipo:'conteo', cant:c});
-    stkOpenName = null; persist(); renderStockBody(); refresh(); toast(`${name}: conteo fijado en ${c}`);
+  stkClose() { STK.open = null; STK.mode = null; renderStockBody(); },
+  stkStep(a) {
+    const i = $('#stkCant'); if (!i) return;
+    const v = Math.max(0, (parseInt(i.value, 10) || 0) + (+a.dataset.d));
+    i.value = STK.mode === 'conteo' ? v : Math.max(1, v); stkPrevPaint();
+  },
+  stkSave(a) {
+    const name = a.dataset.name, mode = STK.mode, info = stockInfo(name); if (!info || !STK_T[mode]) return;
+    const raw = (($('#stkCant') || {}).value || '').trim(), c = parseInt(raw, 10);
+    if (mode === 'conteo' ? (raw === '' || !(c >= 0)) : !(c > 0)) { toast(mode === 'conteo' ? 'Escribe cuántas unidades hay en el mueble' : 'Indica la cantidad'); return; }
+    const porRaw = (($('#stkPor') || {}).value || '').trim(), por = resolveStaff(porRaw) || porRaw;
+    if (!por) { toast(`Escribe quién ${mode === 'repo' ? 'repone' : mode === 'sal' ? 'saca' : 'cuenta'}`); const p = $('#stkPor'); if (p) p.focus(); return; }
+    if (mode === 'sal' && c > info.proj && !armed(a, `Confirmar: solo quedan ${info.proj}`)) return;
+    const nota = (($('#stkNota') || {}).value || '').trim(), at = new Date().toISOString();
+    if (mode === 'conteo') { const it = store.stock.items[name]; it.base = c + usoEn(store.draft, name) - repoEn(store.draft, name); it.baseAt = at; }
+    store.stock.movs.push({id:uid(), at, name, tipo:mode, cant:c, por, nota});
+    STK.open = null; STK.mode = null; persist(); renderStockBody(); refresh();
+    toast(mode === 'repo' ? `${name}: +${c} repuestos por ${por}` : mode === 'sal' ? `${name}: −${c} sacados por ${por}` : `${name}: conteo fijado en ${c}`);
   },
   recuento() {
     if (!settingsUnlocked()) { pinSheet(store.settings.pin ? 'enter' : 'create', 'recuento'); return; }
@@ -2618,7 +2736,7 @@ const actions = {
       if (i.total == null || i.contado == null) return;
       const it = store.stock.items[i.name];
       it.base = i.contado + usoEn(store.draft, i.name) - repoEn(store.draft, i.name); it.baseAt = at;
-      store.stock.movs.push({id:uid(), at, name:i.name, tipo:'conteo', cant:i.contado, nota:'recuento'});
+      store.stock.movs.push({id:uid(), at, name:i.name, tipo:'conteo', cant:i.contado, nota:'recuento', por:rr || resp.trim()});
     });
     const rc = {id:uid(), at, resp: rr || resp.trim(), items};
     store.recuentos.unshift(rc); store.recuentos = store.recuentos.slice(0, 60);
@@ -2642,7 +2760,7 @@ const actions = {
   stkFillAll(a) {
     if (!armed(a, 'Confirmar: reponer todo')) return;
     const at = new Date().toISOString(); let n = 0;
-    Object.keys(store.stock.items).forEach(name => { const i = stockInfo(name); if (i && i.disp < i.total) { store.stock.movs.push({id:uid(), at, name, tipo:'repo', cant:i.total - i.disp}); n++; } });
+    Object.keys(store.stock.items).forEach(name => { const i = stockInfo(name); if (i && i.disp < i.total) { store.stock.movs.push({id:uid(), at, name, tipo:'repo', cant:i.total - i.disp, por:stkDefPor(), nota:'Reponer todo al total'}); n++; } });
     persist(); renderStockBody(); refresh(); toast(n ? `${n} fármacos repuestos al total` : 'Todo estaba completo');
   },
   personal() {
@@ -2862,53 +2980,174 @@ function importBackup(file) {
   rd.readAsText(file);
 }
 
-function renderStockBody() {
-  const box = $('#stockBody'); if (!box) return;
-  const q = norm(($('#stQ') || {}).value || ''), onlyLow = !!($('#stLow') || {}).checked;
+/* ================== stock: vista ================== */
+let STK = {tab:'inv', grp:'all', filt:'all', q:'', open:null, mode:null, mvT:'all', mvQ:'', mvN:60};
+const STK_GRP = n => CONTROLADOS.includes(n) ? 'ctrl' : PARCHES.includes(n) ? 'parche' : 'gen';
+const STK_GRP_NAME = {ctrl:'Controlado', gen:'Medicamento o insumo', parche:'Parche'};
+const STK_NOTAS = {repo:['Farmacia', 'Devolución de un móvil', 'Préstamo devuelto', 'Compra'], sal:['Uso en atención', 'Préstamo a un móvil', 'Vencido', 'Dañado o contaminado', 'Traslado a otra base']};
+const STK_T = {repo:{ic:'↑', lbl:'Reposición', sg:'+', cls:'plus'}, sal:{ic:'↓', lbl:'Salida', sg:'−', cls:'minus'}, conteo:{ic:'=', lbl:'Conteo', sg:'= ', cls:'eq'}};
+const stkClamp = v => Math.max(0, Math.min(100, v));
+const stkWhen = iso => { const d = new Date(iso); if (isNaN(d)) return ''; const t = new Date(); const same = d.toDateString() === t.toDateString(); const y = new Date(t); y.setDate(t.getDate() - 1); return `${same ? 'hoy' : d.toDateString() === y.toDateString() ? 'ayer' : `${pad(d.getDate())}-${pad(d.getMonth() + 1)}`} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+function stkNames() {
   const extras = Object.keys(store.stock.items).filter(n => !CONTROLADOS.includes(n) && !GENERALES.includes(n) && !PARCHES.includes(n));
-  const groups = [['Medicamentos controlados', CONTROLADOS], ['Otros medicamentos e insumos', GENERALES.concat(extras)], ['Parches marcapasos y DEA', PARCHES]];
-  const sm = stockSummary();
-  let untracked = 0;
-  box.innerHTML = groups.map(([title, names]) => {
-    const rows = names.map(name => {
-      const it = store.stock.items[name] || {}, info = stockInfo(name);
-      if (q && !norm(name).includes(q)) return '';
-      if (!info) {
-        untracked++;
-        if (onlyLow) return '';
-        return `<div class="strow"><span class="stname">${esc(name)}<small>Sin total: escribe la dotación para empezar a descontar</small></span>
-          <label class="mcell"><span class="mlbl">Total</span><input type="text" inputmode="numeric" data-stk="total" data-name="${esc(name)}" value="" placeholder="—" aria-label="Total de ${esc(name)}"></label>
-          <span></span><span class="stdisp"><b>—</b></span><span></span></div>`;
-      }
-      if (onlyLow && info.st === 'ok') return '';
-      const pct = Math.max(0, Math.min(100, info.proj / info.total * 100));
-      const note = (info.st === 'out' ? (info.proj <= 0 ? 'Sin stock: reponer' : `Reponer: quedan ${critPct()}% o menos`) : info.st === 'low' ? 'Bajo el mínimo' : 'Sobre el mínimo') + (info.draftUse ? ` · incluye −${info.draftUse} de la entrega en curso` : '') + (info.draftRepo ? ` · incluye +${info.draftRepo} repuestos en la entrega en curso` : '') + (info.proj < 0 ? ' · revisa con un conteo físico' : '');
-      const open = stkOpenName === name;
-      return `<div class="strow" data-st="${info.st}">
-        <span class="stname">${esc(name)}<small>${note}</small></span>
-        <label class="mcell"><span class="mlbl">Total</span><input type="text" inputmode="numeric" data-stk="total" data-name="${esc(name)}" value="${info.total}" aria-label="Total de ${esc(name)}"></label>
-        <label class="mcell"><span class="mlbl">Mínimo</span><input type="text" inputmode="numeric" data-stk="min" data-name="${esc(name)}" value="${filled(it.min) ? esc(it.min) : ''}" placeholder="${info.min}" aria-label="Mínimo de ${esc(name)}"></label>
-        <span class="stdisp"><b>${info.proj}<small> / ${info.total}</small></b><span class="bar"><i style="width:${pct.toFixed(0)}%"></i></span></span>
-        <button type="button" class="btn sm${open ? ' primary' : ''}" data-act="stkOpen" data-name="${esc(name)}">${open ? 'Cerrar' : 'Reponer o contar'}</button>
-        ${open ? `<div class="stedit">
-          <label class="fld" for="stRepo"><span class="lbl">Unidades repuestas</span><input type="text" inputmode="numeric" id="stRepo" value="${Math.max(0, info.total - info.disp)}"></label>
-          <button type="button" class="btn sm primary" data-act="stkRepo" data-name="${esc(name)}">Sumar al stock</button>
-          <label class="fld" for="stCount"><span class="lbl">Conteo físico</span><input type="text" inputmode="numeric" id="stCount" placeholder="${info.proj}"></label>
-          <button type="button" class="btn sm" data-act="stkCount" data-name="${esc(name)}">Fijar conteo</button>
-          <span class="stmini">Reponer suma unidades. El conteo físico reemplaza lo que dice el sistema por lo que hay en el mueble.</span></div>` : ''}
-      </div>`;
-    }).join('');
-    return rows ? `<h3>${title}</h3><div class="stgroup"><div class="strow sthead" aria-hidden="true"><span>Fármaco</span><span>Total</span><span>Mínimo</span><span>Quedan</span><span></span></div>${rows}</div>` : '';
-  }).join('') || '<p class="muted">Sin resultados.</p>';
-  const ss = $('#stSum');
-  if (ss) ss.innerHTML = `${sm.out.length ? `<span class="tag crit">${sm.out.length} por reponer urgente</span>` : ''}${sm.low.length ? `<span class="tag warn">${sm.low.length} bajo el mínimo</span>` : ''}${!sm.out.length && !sm.low.length ? '<span class="tag ok">Todo sobre el mínimo</span>' : ''}<span class="tag">${sm.tracked} con total</span>${untracked ? `<span class="tag">${untracked} sin total</span>` : ''}`;
-  const mv = $('#stMovs');
-  if (mv) {
-    const list = store.stock.movs.map(m => ({at:m.at, txt:`${m.tipo === 'repo' ? 'Reposición' : m.nota === 'recuento' ? 'Recuento semanal' : 'Conteo físico'} · ${m.name}`, val: m.tipo === 'repo' ? `+${m.cant}` : `= ${m.cant}`, cls: m.tipo === 'repo' ? 'plus' : 'eq'}));
-    store.history.forEach(h => { if (h.ejemplo || !h.savedAt) return; [h.controlados, h.generales, h.parches].forEach(arr => (arr || []).forEach(x => { const u = num(x.uso) || 0, rp = num(x.repo) || 0; if (u > 0) list.push({at:h.savedAt, txt:`${folio(h.numero)} · ${x.name}`, val:`−${u}`, cls:'minus'}); if (rp > 0) list.push({at:h.savedAt, txt:`${folio(h.numero)} · ${x.name} repuesto`, val:`+${rp}`, cls:'plus'}); })); });
-    list.sort((a, b) => String(b.at).localeCompare(String(a.at)));
-    mv.innerHTML = list.length ? list.slice(0, 30).map(m => `<div><span>${fmtDate(toLocalInput(new Date(m.at)))} · ${esc(m.txt)}</span><span class="${m.cls}">${m.val}</span></div>`).join('') : '<p class="muted">Aún no hay movimientos. Aparecerán al guardar entregas con uso o al reponer.</p>';
+  return CONTROLADOS.concat(GENERALES, extras, PARCHES);
+}
+function entPor(h) { const en = encOf(h); return en ? encName(en) : (h.entrega && h.entrega.nombre) || h.jefe || ''; }
+function stkMoves() {
+  const rcBy = {}; (store.recuentos || []).forEach(r => { rcBy[r.at] = r.resp || ''; });
+  const L = store.stock.movs.map(m => ({at:m.at, name:m.name, tipo:m.tipo === 'repo' ? 'repo' : m.tipo === 'sal' ? 'sal' : 'conteo', cant:num(m.cant) || 0,
+    por:m.por || (m.nota === 'recuento' ? rcBy[m.at] || '' : ''), nota:m.nota === 'recuento' ? 'Recuento semanal' : (m.nota || ''), ent:false}));
+  store.history.forEach(h => {
+    if (h.ejemplo || !h.savedAt) return;
+    const por = entPor(h), f = folio(h.numero);
+    [h.controlados, h.generales, h.parches].forEach(arr => (arr || []).forEach(x => {
+      const u = num(x.uso) || 0, rp = num(x.repo) || 0;
+      if (u > 0) L.push({at:h.savedAt, name:x.name, tipo:'sal', cant:u, por, nota:`Usado en la entrega ${f}`, ent:true});
+      if (rp > 0) L.push({at:h.savedAt, name:x.name, tipo:'repo', cant:rp, por, nota:`Repuesto en la entrega ${f}`, ent:true});
+    }));
+  });
+  return L.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+function stkDefPor() { return SES && SES.code && !SES.prueba && SES.code !== 'PRUEBA' ? sesLabel() : ''; }
+function stkKpis(sm, mv) {
+  const wk = Date.now() - 7 * 864e5; let inn = 0, out = 0;
+  mv.forEach(m => { const t = Date.parse(m.at); if (t >= wk) { if (m.tipo === 'repo') inn += m.cant; else if (m.tipo === 'sal') out += m.cant; } });
+  const ok = Math.max(0, sm.tracked - sm.out.length - sm.low.length);
+  const k = (f, cls, n, lbl, sub) => `<button type="button" class="kpi ${cls}${STK.tab === 'inv' && STK.filt === f ? ' on' : ''}" data-act="stkFilt" data-f="${f}"><b>${n}</b><span>${lbl}</span><small>${sub}</small></button>`;
+  return k('out', 'crit', sm.out.length, 'Reponer urgente', sm.out.length ? 'Quedan ' + critPct() + '% o menos' : 'Nada urgente')
+    + k('low', 'warn', sm.low.length, 'Bajo el mínimo', sm.low.length ? 'Conviene reponer pronto' : 'Todo sobre el mínimo')
+    + k('ok', 'good', ok, 'Al día', `de ${sm.tracked} con dotación`)
+    + `<button type="button" class="kpi info${STK.tab === 'mov' ? ' on' : ''}" data-act="stkTab" data-t="mov"><b><i class="plus">+${inn}</i> <i class="minus">−${out}</i></b><span>Últimos 7 días</span><small>Unidades repuestas y sacadas</small></button>`;
+}
+function stkLastOf(mv) { const m = {}; mv.forEach(x => { if (!m[x.name]) m[x.name] = x; }); return m; }
+function stkCard(name, info, last) {
+  const it = store.stock.items[name] || {}, g = STK_GRP(name), open = STK.open === name;
+  const head = (chip, cls) => `<div class="sitem-top"><div class="sitem-name">${esc(name)}<span class="sgrp g-${g}">${STK_GRP_NAME[g]}</span></div><span class="schip ${cls}">${chip}</span></div>`;
+  if (!info) return `<article class="sitem" data-st="none">${head('Sin dotación', 'none')}
+    <div class="snone"><label class="fld"><span class="lbl">Dotación total</span><input type="text" inputmode="numeric" data-stk="total" data-name="${esc(name)}" placeholder="Ej. 10" aria-label="Dotación total de ${esc(name)}"></label>
+    <p class="muted">Escribe cuántas unidades debe haber en el mueble y desde ahí se empieza a llevar la cuenta.</p></div></article>`;
+  const pct = stkClamp(info.proj / info.total * 100), mpct = stkClamp(info.min / info.total * 100), falta = Math.max(0, info.total - info.proj);
+  const chip = info.st === 'out' ? (info.proj <= 0 ? 'Sin stock' : 'Reponer urgente') : info.st === 'low' ? 'Bajo el mínimo' : 'Al día';
+  const extra = (info.draftUse ? ` · <span class="minus">−${info.draftUse}</span> en la entrega en curso` : '') + (info.draftRepo ? ` · <span class="plus">+${info.draftRepo}</span> repuestos en la entrega en curso` : '');
+  const T = last ? STK_T[last.tipo] : null;
+  const btn = (m, lbl, cls) => `<button type="button" class="sbtn ${cls}${open && STK.mode === m ? ' on' : ''}" data-act="stkMode" data-mode="${m}" data-name="${esc(name)}">${lbl}</button>`;
+  return `<article class="sitem${open ? ' open' : ''}" data-st="${info.st}">
+    ${head(chip, info.st)}
+    <div class="sqty"><b>${info.proj}</b><span>de ${info.total}</span><small>${falta ? `faltan <b>${falta}</b> para completar` : 'completo'}</small></div>
+    <div class="sbar" title="Mínimo: ${info.min}"><i style="width:${pct.toFixed(0)}%"></i>${info.min > 0 ? `<em style="left:${mpct.toFixed(0)}%"></em>` : ''}</div>
+    <div class="smeta">Mínimo ${info.min}${extra}</div>
+    <div class="slast">${T ? `<span class="${T.cls}">${T.ic} ${T.sg}${last.cant}</span> ${T.lbl.toLowerCase()} · ${esc(last.por || 'sin nombre')} · ${stkWhen(last.at)}` : '<span class="muted">Sin movimientos todavía</span>'}</div>
+    <div class="sacts">${btn('sal', '− Sacar', 'out')}${btn('repo', '+ Reponer', 'in')}${btn('conteo', 'Contar', 'cnt')}<button type="button" class="sbtn ico${open && STK.mode === 'info' ? ' on' : ''}" data-act="stkMode" data-mode="info" data-name="${esc(name)}" aria-label="Dotación, mínimo e historial de ${esc(name)}" title="Dotación, mínimo e historial">⋯</button></div>
+    ${open ? stkForm(name, info, it) : ''}
+  </article>`;
+}
+function stkForm(name, info, it) {
+  const mode = STK.mode;
+  if (mode === 'info') {
+    const hist = stkMoves().filter(m => m.name === name).slice(0, 8);
+    return `<div class="sform" data-mode="info">
+      <div class="sform-row"><label class="fld"><span class="lbl">Dotación total</span><input type="text" inputmode="numeric" data-stk="total" data-name="${esc(name)}" value="${info.total}"></label>
+      <label class="fld"><span class="lbl">Mínimo</span><input type="text" inputmode="numeric" data-stk="min" data-name="${esc(name)}" value="${filled(it.min) ? esc(it.min) : ''}" placeholder="${info.min}"></label></div>
+      <p class="muted">Si dejas el mínimo vacío se usa el 25% de la dotación.</p>
+      <h4>Últimos movimientos</h4>
+      <div class="mvmini">${hist.length ? hist.map(stkMvRow).join('') : '<p class="muted">Sin movimientos todavía.</p>'}</div>
+      <div class="sform-act"><button type="button" class="btn sm" data-act="stkClose">Cerrar</button></div></div>`;
   }
+  const q0 = mode === 'repo' ? Math.max(1, info.total - info.proj) : mode === 'sal' ? 1 : info.proj;
+  const who = mode === 'repo' ? '¿Quién repone?' : mode === 'sal' ? '¿Quién saca?' : '¿Quién cuenta?';
+  const ok = mode === 'repo' ? 'Confirmar reposición' : mode === 'sal' ? 'Confirmar salida' : 'Guardar conteo';
+  const tt = mode === 'repo' ? `Reponer ${esc(name)}` : mode === 'sal' ? `Sacar ${esc(name)}` : `Contar ${esc(name)} en el mueble`;
+  return `<div class="sform" data-mode="${mode}">
+    <div class="sform-h">${STK_T[mode].ic} ${tt}</div>
+    <div class="sform-row">
+      <div class="fld"><span class="lbl">${mode === 'conteo' ? 'Unidades que hay' : 'Cantidad'}</span><div class="qstep"><button type="button" data-act="stkStep" data-d="-1" aria-label="Restar uno">−</button><input type="text" inputmode="numeric" id="stkCant" value="${q0}" aria-label="Cantidad"><button type="button" data-act="stkStep" data-d="1" aria-label="Sumar uno">+</button></div></div>
+      <label class="fld" for="stkPor"><span class="lbl">${who}</span><input type="text" id="stkPor" list="dl-all" autocomplete="off" value="${esc(stkDefPor())}" placeholder="Código o nombre, ej. R7"></label>
+      ${mode !== 'conteo' ? `<label class="fld" for="stkNota"><span class="lbl">Motivo (opcional)</span><input type="text" id="stkNota" list="dl-stk-${mode}" autocomplete="off" placeholder="${mode === 'repo' ? 'Ej. Farmacia' : 'Ej. Préstamo a un móvil'}"></label><datalist id="dl-stk-${mode}">${STK_NOTAS[mode].map(n => `<option value="${esc(n)}">`).join('')}</datalist>` : ''}
+    </div>
+    <div class="sform-prev" id="stkPrev" data-name="${esc(name)}"></div>
+    <div class="sform-act"><button type="button" class="btn sm" data-act="stkClose">Cancelar</button><button type="button" class="btn sm primary" data-act="stkSave" data-name="${esc(name)}">${ok}</button></div>
+  </div>`;
+}
+function stkPrevPaint() {
+  const box = $('#stkPrev'); if (!box) return;
+  const info = stockInfo(box.dataset.name); if (!info) return;
+  const c = parseInt(($('#stkCant') || {}).value, 10), mode = STK.mode;
+  if (!(c >= 0)) { box.innerHTML = '<span class="muted">Escribe la cantidad.</span>'; box.dataset.st = ''; return; }
+  const after = mode === 'repo' ? info.proj + c : mode === 'sal' ? info.proj - c : c;
+  const st = after <= 0 || after <= info.total * critPct() / 100 ? 'out' : (info.min > 0 && after <= info.min) ? 'low' : 'ok';
+  let txt = `Quedará en <b>${after} de ${info.total}</b>`;
+  if (mode === 'conteo') txt += after === info.proj ? ' · coincide con lo que dice el sistema' : ` · el sistema decía ${info.proj} (diferencia ${after > info.proj ? '+' : '−'}${Math.abs(after - info.proj)})`;
+  if (after > info.total) txt += ' · queda sobre la dotación';
+  if (after < 0) txt = `Solo quedan ${info.proj}: no alcanza para sacar ${c}`;
+  box.innerHTML = txt; box.dataset.st = after < 0 ? 'out' : st;
+}
+function stkMvRow(m) {
+  const T = STK_T[m.tipo];
+  return `<div class="mvrow ${T.cls}"><span class="mvic" aria-hidden="true">${T.ic}</span><span class="mvtx"><b>${esc(m.name)}</b><small>${[T.lbl, m.por ? esc(m.por) : 'sin nombre', m.nota ? esc(m.nota) : ''].filter(Boolean).join(' · ')}</small></span><span class="mvq"><b>${T.sg}${m.cant}</b><small>${pad(new Date(m.at).getHours())}:${pad(new Date(m.at).getMinutes())}</small></span></div>`;
+}
+function stkDay(iso) {
+  const d = new Date(iso), t = new Date(), y = new Date(t); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return 'Hoy';
+  if (d.toDateString() === y.toDateString()) return 'Ayer';
+  return d.toLocaleDateString('es-CL', {weekday:'long', day:'numeric', month:'long'}).replace(/^./, c => c.toUpperCase());
+}
+function stkPaneInv(sm, mv) {
+  const last = stkLastOf(mv), q = norm(STK.q);
+  const order = {out:0, low:1, ok:2, none:3};
+  const groups = [['ctrl', 'Medicamentos controlados'], ['gen', 'Otros medicamentos e insumos'], ['parche', 'Parches marcapasos y DEA']];
+  let shown = 0;
+  const html = groups.filter(([g]) => STK.grp === 'all' || STK.grp === g).map(([g, title]) => {
+    const cards = stkNames().filter(n => STK_GRP(n) === g).map(n => ({n, i:stockInfo(n)})).filter(({n, i}) => {
+      if (q && !norm(n).includes(q)) return false;
+      const st = i ? i.st : 'none';
+      return STK.filt === 'all' || STK.filt === st;
+    }).sort((a, b) => order[a.i ? a.i.st : 'none'] - order[b.i ? b.i.st : 'none']);
+    shown += cards.length;
+    return cards.length ? `<section class="sgroup"><h3>${title} <span class="muted">· ${cards.length}</span></h3><div class="sgrid">${cards.map(({n, i}) => stkCard(n, i, last[n])).join('')}</div></section>` : '';
+  }).join('');
+  return html || `<div class="sempty"><b>${STK.filt === 'out' ? 'Nada por reponer urgente' : STK.filt === 'low' ? 'Nada bajo el mínimo' : 'Sin resultados'}</b><span class="muted">${STK.filt !== 'all' || q ? 'Prueba quitando el filtro o la búsqueda.' : ''}</span></div>`;
+}
+function stkChips() {
+  const c = (k, v, lbl) => `<button type="button" class="fchip${STK[k] === v ? ' on' : ''}" data-act="stkChip" data-k="${k}" data-v="${v}">${lbl}</button>`;
+  return `<div class="fchips">${c('grp', 'all', 'Todo')}${c('grp', 'ctrl', 'Controlados')}${c('grp', 'gen', 'Medicamentos e insumos')}${c('grp', 'parche', 'Parches')}</div>
+    <div class="fchips">${c('filt', 'all', 'Cualquier estado')}${c('filt', 'out', '● Reponer urgente')}${c('filt', 'low', '● Bajo el mínimo')}${c('filt', 'ok', '● Al día')}</div>`;
+}
+function stkPaneMov(mv) {
+  const q = norm(STK.mvQ);
+  const L = mv.filter(m => (STK.mvT === 'all' || STK.mvT === m.tipo) && (!q || norm(`${m.name} ${m.por} ${m.nota}`).includes(q)));
+  if (!L.length) return '<div class="sempty"><b>Sin movimientos</b><span class="muted">Aparecen al sacar, reponer o contar aquí, y al guardar entregas con uso.</span></div>';
+  let html = '', day = '';
+  L.slice(0, STK.mvN).forEach(m => { const d = stkDay(m.at); if (d !== day) { html += `${day ? '</div>' : ''}<h4 class="mvday">${d}</h4><div class="mvlist2">`; day = d; } html += stkMvRow(m); });
+  html += '</div>';
+  if (L.length > STK.mvN) html += `<div class="srow" style="justify-content:center"><button type="button" class="btn sm" data-act="stkMore">Ver más (${L.length - STK.mvN})</button></div>`;
+  return html;
+}
+function stkPaneRc() {
+  const r0 = store.recuentos[0];
+  return `<div class="rccard"><div><b>Recuento semanal (viernes)</b><p class="muted">Se cuentan los otros medicamentos e insumos del mueble. Lo contado reemplaza lo que dice el sistema y se crea un PDF.</p>
+      <p>${r0 ? `Último: <b>${stkWhen(r0.at)}</b>${r0.resp ? ' · ' + esc(r0.resp) : ''}` : 'Aún no hay recuentos.'}</p></div>
+      <button type="button" class="btn primary" data-act="recuento">Hacer recuento</button></div>
+    ${store.recuentos.length ? `<h4>Recuentos anteriores</h4><div class="mvlist2">${store.recuentos.slice(0, 10).map(r => { const nf = (r.items || []).filter(i => i.reponer > 0).length; return `<div class="mvrow eq"><span class="mvic">=</span><span class="mvtx"><b>${stkWhen(r.at)}</b><small>${esc(r.resp || 'sin nombre')} · ${nf ? nf + ' por reponer' : 'todo completo'}</small></span><span class="mvq"><button type="button" class="linkbtn" data-act="recuentoPdf" data-id="${r.id}">PDF</button></span></div>`; }).join('')}</div>` : ''}
+    <div class="rccard soft"><div><b>Reponer todo al total</b><p class="muted">Úsalo solo cuando farmacia dejó el mueble completo: suma lo que falte a cada fármaco para llegar a su dotación.</p></div>
+      <button type="button" class="btn sm" data-act="stkFillAll">Reponer todo al total</button></div>`;
+}
+function renderStockBody() {
+  const pane = $('#stkPane'); if (!pane) return;
+  const sm = stockSummary(), mv = stkMoves();
+  const k = $('#stKpis'); if (k) k.innerHTML = stkKpis(sm, mv);
+  const tb = $('#stTabs'); if (tb) tb.innerHTML = [['inv', 'Inventario'], ['mov', 'Movimientos'], ['rc', 'Recuento semanal']].map(([t, l]) => `<button type="button" role="tab" aria-selected="${STK.tab === t}" class="stab${STK.tab === t ? ' on' : ''}" data-act="stkTab" data-t="${t}">${l}</button>`).join('');
+  if (pane.dataset.tab !== STK.tab) {
+    pane.dataset.tab = STK.tab;
+    pane.innerHTML = STK.tab === 'inv' ? `<div class="stools"><input type="search" id="stQ" placeholder="Buscar fármaco o insumo" aria-label="Buscar fármaco o insumo" autocomplete="off" value="${esc(STK.q)}"><div id="stChips"></div></div><div id="stList"></div>`
+      : STK.tab === 'mov' ? `<div class="stools"><input type="search" id="stMvQ" placeholder="Buscar fármaco, persona o motivo" aria-label="Buscar movimientos" autocomplete="off" value="${esc(STK.mvQ)}"><div class="fchips" id="stMvChips"></div></div><div id="stList"></div>`
+      : '<div id="stList"></div>';
+  }
+  const list = $('#stList');
+  if (STK.tab === 'inv') { $('#stChips').innerHTML = stkChips(); list.innerHTML = stkPaneInv(sm, mv); stkPrevPaint(); }
+  else if (STK.tab === 'mov') {
+    $('#stMvChips').innerHTML = [['all', 'Todo'], ['repo', '↑ Reposiciones'], ['sal', '↓ Salidas'], ['conteo', '= Conteos']].map(([v, l]) => `<button type="button" class="fchip${STK.mvT === v ? ' on' : ''}" data-act="stkChip" data-k="mvT" data-v="${v}">${l}</button>`).join('');
+    list.innerHTML = stkPaneMov(mv);
+  } else list.innerHTML = stkPaneRc();
 }
 function renderPersonal() {
   const box = $('#pBody'); if (!box) return;
@@ -2935,7 +3174,9 @@ document.addEventListener('input', ev => {
   const t = ev.target;
   if (t.id === 'genQ') { genFilter.q = t.value; applyGenFilter(); return; }
   if (t.id === 'genUsed') { genFilter.used = t.checked; applyGenFilter(); return; }
-  if (t.id === 'stQ' || t.id === 'stLow') { renderStockBody(); return; }
+  if (t.id === 'stQ') { STK.q = t.value; STK.open = null; renderStockBody(); return; }
+  if (t.id === 'stMvQ') { STK.mvQ = t.value; STK.mvN = 60; renderStockBody(); return; }
+  if (t.id === 'stkCant') { const c = t.value.replace(/[^0-9]/g, ''); if (c !== t.value) t.value = c; stkPrevPaint(); return; }
   if (t.id === 'pQ') { renderPersonal(); return; }
   if (t.dataset && t.dataset.pat !== undefined) {
     if (isRO()) return;
