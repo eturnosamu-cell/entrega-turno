@@ -1369,9 +1369,18 @@ function sectionMissing(e) {
   need('s-cierre', filled(e.recibe.nombre), 'Nombre de quien recibe');
   return m;
 }
+/* el 30 de cada mes (en febrero, el último día: 28 o 29) toca revisar vencimientos */
+const VENC_TXT = 'Recordatorio: hoy hay que revisar vencimientos';
+function vencDay(e) {
+  let d = e && e.fecha ? new Date(e.fecha) : new Date();
+  if (isNaN(d)) d = new Date();
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return d.getDate() === Math.min(30, last);
+}
 function alertsOf(e, opts = {}) {
   const a = [], S = store.settings;
-  const add = (sev, sec, text) => a.push({sev, sec, text});
+  const add = (sev, sec, text, tag) => a.push({sev, sec, text, tag});
+  if (vencDay(e)) add('crit', 's-novedades', VENC_TXT, 'Vencimientos');
   if (opts.stock) {
     const sum = stockSummary();
     const secOf = n => CONTROLADOS.includes(n) ? 's-controlados' : PARCHES.includes(n) ? 's-insumos' : 's-generales';
@@ -1465,8 +1474,9 @@ function resetSev(k) { const box = $('#' + k + 'Sev'); if (box) { delete box.dat
 const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por ? `<small class="jpor">${esc(j.por)}</small>` : ''}</span><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad">×</button></div>`;
 function renderNov() {
   const e = cur(), box = $('#novList'); if (!box) return;
-  const items = novItems(e);
-  const html = items.length ? items.map(j => jitemHtml(j, j._src === 'jefatura' ? 'delJef' : 'delNov')).join('') : '<p class="muted">Sin novedades en este turno.</p>';
+  const items = novItems(e).filter(j => !(vencDay(e) && j.txt === VENC_TXT));
+  const venc = vencDay(e) ? `<div class="jitem sev-r"><span class="jh">Hoy</span><span class="jt"><span class="jsev r">Rojo</span>${VENC_TXT}<small class="jpor">Automático · el 30 de cada mes (en febrero, el último día)</small></span></div>` : '';
+  const html = venc + (items.length ? items.map(j => jitemHtml(j, j._src === 'jefatura' ? 'delJef' : 'delNov')).join('') : (venc ? '' : '<p class="muted">Sin novedades en este turno.</p>'));
   if (box.innerHTML !== html) box.innerHTML = html;
   const lg = $('#novLegacy'); if (lg) lg.hidden = !filled(e.novedades);
 }
@@ -3533,7 +3543,7 @@ function tvRender() {
   const rows = [];
   novItems(e).forEach(j => rows.push({k:sevRank(j.sev), at:String(j.at || ''), html:nvRow(SEV_NAME[j.sev] ? 'sev-' + j.sev : '', 'Novedad' + (jefHora(j) ? ' ' + jefHora(j) : ''), j.txt)}));
   String(e.novedades || '').split('\n').map(t => t.replace(/^[\s•\-–]+/, '').trim()).filter(Boolean).forEach(t => rows.push({k:3, at:'~', html:nvRow('', 'Novedad', t)}));
-  alertsOf(e).filter(a => a.sev === 'crit' && !TV_SKIP.has(a.sec)).forEach(a => rows.push({k:0, at:'~', html:nvRow('sev-r', TV_TAG[a.sec] || secName(a.sec), a.text)}));
+  alertsOf(e).filter(a => a.sev === 'crit' && !TV_SKIP.has(a.sec)).forEach(a => rows.push({k:0, at:'~', html:nvRow('sev-r', a.tag || TV_TAG[a.sec] || secName(a.sec), a.text)}));
   rows.sort((a, b) => a.k - b.k || (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   const items = rows.map(r => r.html);
 
