@@ -2136,7 +2136,7 @@ document.addEventListener('keydown', ev => {
 /* ================== PDF imprimible y respaldo en la nube ================== */
 const PDF_LIBS = ['https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js', 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js'];
 const DRIVE = 'Google Drive', DRIVE_FOLDER = 'SAMU Entregas de turno', SHARE_DEFAULT = '';
-const SCRIPT_URL_OLD = 'https://script.google.com/macros/s/AKfycbzjNl-3VRrA8eQWmKCqQbll2nJQncR6F2z9rXaq2gp7MM35G7rHYMhEB6tNbw-KNalj/exec', SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbx4f-8vRLZtnzLL5MFhrfeExMHmlLfgdM7cR5DwVrR7RRYLuEv3acRYRSBufF7X-Q9b/exec';
+const SCRIPT_URL_OLD = 'https://script.google.com/macros/s/AKfycbzjNl-3VRrA8eQWmKCqQbll2nJQncR6F2z9rXaq2gp7MM35G7rHYMhEB6tNbw-KNalj/exec', SCRIPT_URL_PREV = 'https://script.google.com/macros/s/AKfycbx4f-8vRLZtnzLL5MFhrfeExMHmlLfgdM7cR5DwVrR7RRYLuEv3acRYRSBufF7X-Q9b/exec', SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbw9k2QCRyikf3m5ybxJ7Y40GHbW7egSuBi4s1ncuE69IYRikG8t9r6KZYhLljdygO1iOA/exec';
 const BK = {mcp:null, downloads:null, folder:null, folderName:'', ready:false, busy:false, lastErr:''};
 let pdfLibP = null;
 function loadScript(src) { return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error('sin conexión')); document.head.appendChild(sc); }); }
@@ -2339,7 +2339,7 @@ async function runBackups(list, {quiet = false} = {}) {
 async function initBackup() {
   if (!store.settings.backup) store.settings.backup = {auto:true};
   if (store.settings.backup.shareWith === undefined) store.settings.backup.shareWith = SHARE_DEFAULT;
-  if (!framed && store.settings.backup.scriptUrl === SCRIPT_URL_OLD) { store.settings.backup.scriptUrl = SCRIPT_URL_DEFAULT; persist(); }
+  if (!framed && (store.settings.backup.scriptUrl === SCRIPT_URL_OLD || store.settings.backup.scriptUrl === SCRIPT_URL_PREV)) { store.settings.backup.scriptUrl = SCRIPT_URL_DEFAULT; persist(); }
   if (!framed && store.settings.backup.scriptUrl === undefined) { store.settings.backup.scriptUrl = SCRIPT_URL_DEFAULT; persist(); }
   if (framed && window.claude && typeof window.claude.use === 'function') {
     const [m, d] = await Promise.all([window.claude.use('mcp').catch(() => null), window.claude.use('downloads').catch(() => null)]);
@@ -3737,7 +3737,7 @@ async function accesosSheet() {
 /* ================== entrega en línea (varios computadores por el script de Google) ==================
    Cada computador manda solo lo que cambió (campo por campo) y recibe lo que cambiaron los demás.
    Si dos personas escriben el mismo campo a la vez, queda lo último que llegó. */
-const SYNC_KEY = 'samu-entrega-turno-sync';
+const SYNC_KEY = 'samu-entrega-turno-sync', MIGR_KEY = 'samu-entrega-migr';
 const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin','mailJef','bencina'];
 const SY = {started:false, rev:null, base:null, busy:false, again:false, soonT:null, tick:null, n:0, last:null, err:'', noScript:false, act:0, adopting:false};
 const clone = o => o === undefined ? undefined : JSON.parse(JSON.stringify(o));
@@ -3829,7 +3829,13 @@ function adoptSync(next) {
 async function syncFirst() {
   const r = await syncPost({action:'pull', since:0});
   const server = mergeResp({live:{}, hist:{}}, r);
-  if (!r.rev) { SY.base = {live:{}, hist:{}}; SY.rev = 0; return; }      /* Google vacío: este computador manda lo suyo */
+  if (!r.rev) {      /* Google vacío: este computador manda lo suyo */
+    SY.base = {live:{}, hist:{}}; SY.rev = 0;
+    /* traspaso al script nuevo: datos copiados del script anterior en este navegador */
+    let mg = null; try { mg = JSON.parse(localStorage.getItem(MIGR_KEY) || 'null'); } catch (e) {}
+    if (mg && mg.live && SES && SES.admin) { adoptSync({live:mg.live, hist:mg.hist || {}}); try { localStorage.removeItem(MIGR_KEY); } catch (e) {} toast('Datos traspasados al script nuevo de Google'); }
+    return;
+  }
   SY.base = server; SY.rev = r.rev;
   const local = clone(syncView()), meta = syncMeta(false);
   const next = clone(server);
@@ -3857,8 +3863,19 @@ async function syncCycle() {
     const now = clone(syncView());
     const next = sapply(clone(SY.base), sdiff(sent, now, [], []), null);
     if (!jeq(next, now)) adoptSync(next);
-    syncMeta(true); SY.last = new Date(); SY.err = '';
+    syncMeta(true); SY.last = new Date(); SY.err = ''; SY.errNet = false;
   } catch (e) {
+    if (e && e.detail === 'permiso') {
+      /* Google no aceptó estos cambios (no está a cargo): se descartan y se muestra lo que hay en Google */
+      try {
+        const r = await syncPost({action:'pull', since:0});
+        SY.base = mergeResp({live:{}, hist:{}}, r); SY.rev = r.rev;
+        adoptSync(clone(SY.base)); syncMeta(true); SY.last = new Date(); SY.err = ''; SY.errNet = false;
+        toast('Google no aceptó esos cambios: solo el jefe de turno a cargo puede modificar la entrega');
+        return;
+      } catch (x) { e = x; }
+    }
+    SY.errNet = !!(e && e.code === 'net');
     SY.err = e && e.code === 'auth' ? 'La sesión venció: vuelve a entrar'
       : e && e.code === 'old' ? 'El script de Google es la versión anterior: falta actualizarlo para la entrega en línea'
       : e && e.code === 'net' ? 'Sin conexión: los cambios quedan en este computador y se envían al volver internet'
@@ -3891,7 +3908,7 @@ function syncPaint() {
   const info = $('#syncInfo'); if (info) info.textContent = syncInfoText();
   if (framed || !scriptUrl() || (store.settings.backup || {}).sync === false) { el.hidden = true; return; }
   el.hidden = false;
-  if (SY.err) { el.dataset.st = 'off'; el.textContent = SY.noScript ? '● Falta actualizar el script' : '● Sin conexión'; el.title = SY.err; }
+  if (SY.err) { el.dataset.st = 'off'; el.textContent = SY.noScript ? '● Falta actualizar el script' : SY.errNet ? '● Sin conexión' : '● Problema con Google'; el.title = SY.err; }
   else if (SY.last) { el.dataset.st = 'on'; el.textContent = '● En línea'; el.title = 'Sincronizado con los otros computadores'; }
   else { el.dataset.st = ''; el.textContent = '● Conectando…'; el.title = ''; }
 }
