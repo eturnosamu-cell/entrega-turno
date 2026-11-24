@@ -1301,7 +1301,7 @@ function prefillRadios(i, id) {
   toast(`Radios de ${id} copiadas de la entrega ${folio(src.numero)}. Cámbialas si no corresponden.`);
 }
 function staffOptions(v) {
-  const P = [...store.settings.personal].sort(claveSort);
+  const P = [...staffP()].sort(claveSort);
   const groups = ['R','PM','C','O'].map(r => { const list = P.filter(p => rolOf(p.clave) === r); return list.length ? `<optgroup label="${ROL_NAME[r]}">${list.map(p => { const l = staffLabel(p); return `<option value="${esc(l)}">${esc(l)}${p.sup ? ' (suplente)' : ''}</option>`; }).join('')}</optgroup>` : ''; }).join('');
   const extra = filled(v) && !P.some(p => staffLabel(p) === v) ? `<option value="${esc(v)}">${esc(v)}</option>` : '';
   return `<option value="">Elegir funcionario…</option>${extra}${groups}`;
@@ -1312,7 +1312,7 @@ function staffSel(path, label) {
 function rerenderStaffSelects() { $$('#fs select[data-staffsel]').forEach(sel => { const v = get(cur(), sel.dataset.bind) || ''; sel.innerHTML = staffOptions(v); sel.value = v; }); }
 function rerenderMovilSelects() { $$('#fs select[data-bind^="moviles."]').forEach(sel => { const v = get(cur(), sel.dataset.bind) || ''; sel.innerHTML = movilOptions(v); sel.value = v; }); }
 function renderDatalists() {
-  const P = [...store.settings.personal].sort(claveSort), opt = p => `<option value="${esc(staffLabel(p))}"></option>`;
+  const P = [...staffP()].sort(claveSort), opt = p => `<option value="${esc(staffLabel(p))}"></option>`;
   const series = new Set(); store.history.concat([store.draft]).forEach(h => ((h && h.cascos) || []).forEach(c => { if (filled(c.serie)) series.add(String(c.serie).trim()); }));
   $('#dlHost').innerHTML = `<datalist id="dl-all">${P.map(opt).join('')}</datalist>` + ['R','PM','C'].map(r => `<datalist id="dl-${r}">${P.filter(p => rolOf(p.clave) === r).map(opt).join('')}</datalist>`).join('') + `<datalist id="dl-cascos">${[...series].sort().map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`;
 }
@@ -1327,7 +1327,18 @@ function cascoRows(e) {
 }
 let resSig = null;
 /* personal de abastecimiento: lista aparte con teléfono, guardada en Google (no en la página pública) */
-const abastList = () => Array.isArray(store.settings.abastList) ? store.settings.abastList.filter(x => x && x.n) : [];
+const isCfgP = p => p && /^(AB\d+|CFG-)/i.test(String(p.clave || ''));
+const staffP = () => (store.settings.personal || []).filter(p => !isCfgP(p));
+const abastList = () => {
+  const fromP = (store.settings.personal || []).filter(p => /^AB\d+$/i.test(p.clave)).sort((a, b) => parseInt(a.clave.slice(2), 10) - parseInt(b.clave.slice(2), 10)).map(p => ({n:p.nombre, f:p.fono || ''}));
+  return fromP.length ? fromP : (Array.isArray(store.settings.abastList) ? store.settings.abastList.filter(x => x && x.n) : []);
+};
+const bencina = () => { const p = (store.settings.personal || []).find(x => String(x.clave).toUpperCase() === 'CFG-BENCINA'); return p ? p.nombre : (store.settings.bencina || ''); };
+function setCfgP(clave, nombre, extra) {
+  const P = (store.settings.personal || []).filter(p => String(p.clave).toUpperCase() !== clave.toUpperCase());
+  if (nombre) P.push(Object.assign({clave, nombre, sup:false}, extra || {}));
+  store.settings.personal = P;
+}
 const fonoFmt = f => { const d = String(f || '').replace(/\D/g, ''); return d.length === 9 ? `${d[0]} ${d.slice(1, 5)} ${d.slice(5)}` : String(f || ''); };
 const abastFono = name => { const x = abastList().find(a => norm(a.n) === norm(name)); return x ? x.f : ''; };
 const RES_EST = ['Disponible', 'En taller', 'Préstamo', 'Mantención'];
@@ -2032,7 +2043,7 @@ let cbxCur = null;
 function cbxRender(wrap) {
   const input = wrap.querySelector('input'), listEl = wrap.querySelector('.cbx-list'), role = wrap.dataset.role;
   const segs = String(input.value).split('/'), multi = !!wrap.dataset.short && segs.length > 1;
-  const q = (multi ? segs[segs.length - 1] : input.value).trim(), P = [...store.settings.personal].sort(claveSort).filter(x => role === 'all' || rolOf(x.clave) === role);
+  const q = (multi ? segs[segs.length - 1] : input.value).trim(), P = [...staffP()].sort(claveSort).filter(x => role === 'all' || rolOf(x.clave) === role);
   const isLabel = !q || isStaffLabel(q), lbl = x => wrap.dataset.short ? shortLabel(x) : staffLabel(x);
   const nq = norm(q).replace(/[\s-]/g, '');
   const items = isLabel ? P : P.filter(x => norm(x.clave + x.nombre).replace(/[\s-]/g, '').includes(nq) || norm(x.nombre).includes(norm(q)));
@@ -2836,7 +2847,8 @@ const actions = {
       const m = l.match(/^(.*?)[\s:·,;-]*(?:f:|fono:?|tel[eé]fono:?)?\s*(\+?[\d\s]{8,})$/i);
       return m ? {n:m[1].replace(/[\s:·,;-]+$/, '').trim(), f:m[2].replace(/\D/g, '')} : {n:l, f:''};
     }).filter(x => x.n);
-    store.settings.abastList = L; persist(); renderAll(); toast(`Abastecimiento: ${L.length} persona${L.length === 1 ? '' : 's'} guardada${L.length === 1 ? '' : 's'}`);
+    store.settings.personal = (store.settings.personal || []).filter(p => !/^AB\d+$/i.test(p.clave)).concat(L.map((x, i) => ({clave:'AB' + (i + 1), nombre:x.n, fono:x.f, sup:false})));
+    delete store.settings.abastList; persist(); renderAll(); toast(`Abastecimiento: ${L.length} persona${L.length === 1 ? '' : 's'} guardada${L.length === 1 ? '' : 's'}`);
     actions.settings();
   },
   personal() {
@@ -2915,7 +2927,7 @@ const actions = {
         <label class="fld" for="setNum"><span class="lbl">Nº de la próxima entrega</span><input type="text" inputmode="numeric" id="setNum" value="${S.nextNum}"></label>
         <label class="fld" for="setRad"><span class="lbl">Radios disponibles (1 a …)</span><input type="text" inputmode="numeric" id="setRad" value="${S.nRadios || 20}"></label>
         <label class="fld" for="setCrit"><span class="lbl">Alerta roja de stock (% que queda)</span><input type="text" inputmode="numeric" id="setCrit" value="${critPct()}"></label>
-        <label class="fld" for="setBencina"><span class="lbl">Bencinera para cargar los móviles</span><select id="setBencina">${['', 'Aramco', 'Copec'].map(b => `<option value="${b}"${(store.settings.bencina || '') === b ? ' selected' : ''}>${b || 'Sin definir'}</option>`).join('')}</select></label>
+        <label class="fld" for="setBencina"><span class="lbl">Bencinera para cargar los móviles</span><select id="setBencina">${['', 'Aramco', 'Copec'].map(b => `<option value="${b}"${bencina() === b ? ' selected' : ''}>${b || 'Sin definir'}</option>`).join('')}</select></label>
         <label class="fld" for="setMailJef"><span class="lbl">Correo de jefatura (avisos FAF)</span><input type="email" id="setMailJef" value="${esc(mailJef())}" autocomplete="off"></label>
       </div>
       <p class="muted">Usa el Nº para seguir la numeración del talonario en papel.</p>
@@ -2928,7 +2940,7 @@ const actions = {
       <h3>Claves de acceso</h3>
       ${SES && SES.admin ? `<div class="srow"><p style="flex:1">Las claves de jefatura, jefes de turno, ambulancias y reanimadores se guardan en Google.</p><button type="button" class="btn sm" data-act="accesos">Ver y cambiar claves</button></div>` : '<p class="muted">Solo la jefatura o el administrador pueden cambiar claves.</p>'}
       <h3>Personal</h3>
-      <div class="srow"><p style="flex:1">${store.settings.personal.length} funcionarios con clave (R, PM y C).</p><button type="button" class="btn sm" data-act="personal">Ver y editar nómina</button></div>
+      <div class="srow"><p style="flex:1">${staffP().length} funcionarios con clave (R, PM y C).</p><button type="button" class="btn sm" data-act="personal">Ver y editar nómina</button></div>
       <div class="srow"><p style="flex:1">${abastList().length} personas de abastecimiento.</p><button type="button" class="btn sm" data-act="abastEdit">Ver y editar abastecimiento</button></div>
       <h3>Móviles</h3>
       <p class="muted">Aparecen en la lista al elegir el móvil. Agrega la patente si quieres verla junto al número.</p>
@@ -2964,7 +2976,7 @@ const actions = {
     if (!(cp >= 0 && cp <= 90)) { toast('La alerta roja debe estar entre 0 y 90 %'); return; }
     const mj = (($('#setMailJef') || {}).value || '').trim();
     if (mj && !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(mj)) { toast('Revisa el correo de jefatura'); return; }
-    Object.assign(store.settings, {rMin:mn, rMax:mx, nextNum:n, nRadios:nr, stockCrit:cp, mailJef:mj || MAIL_JEF_DEFAULT, bencina:(($('#setBencina') || {}).value || '')}); persist(); closeSheet(); renderAll(); toast('Ajustes guardados');
+    Object.assign(store.settings, {rMin:mn, rMax:mx, nextNum:n, nRadios:nr, stockCrit:cp, mailJef:mj || MAIL_JEF_DEFAULT}); setCfgP('CFG-BENCINA', (($('#setBencina') || {}).value || '')); delete store.settings.bencina; persist(); closeSheet(); renderAll(); toast('Ajustes guardados');
   },
   async sendLocalFile(a) {
     const to = (($('#lfMail') || {}).value || '').trim();
@@ -3230,7 +3242,7 @@ function renderStockBody() {
 function renderPersonal() {
   const box = $('#pBody'); if (!box) return;
   const q = norm(($('#pQ') || {}).value || ''), groups = {};
-  [...store.settings.personal].sort(claveSort).forEach(p => { if (q && !norm(p.clave + ' ' + p.nombre).includes(q)) return; const r = rolOf(p.clave); (groups[r] = groups[r] || []).push(p); });
+  [...staffP()].sort(claveSort).forEach(p => { if (q && !norm(p.clave + ' ' + p.nombre).includes(q)) return; const r = rolOf(p.clave); (groups[r] = groups[r] || []).push(p); });
   box.innerHTML = Object.keys(ROL_NAME).filter(r => groups[r]).map(r => `<h3>${ROL_NAME[r]} · ${groups[r].length}</h3><div class="plist">${groups[r].map(p => `<div class="prow"><b>${esc(p.clave)}</b><span>${esc(titleCase(p.nombre))}</span>${p.sup ? '<span class="tag">Suplente</span>' : '<span></span>'}<button type="button" class="xbtn" data-act="delPerson" data-clave="${esc(p.clave)}" aria-label="Quitar ${esc(p.clave)}">×</button></div>`).join('')}</div>`).join('') || '<p class="muted">Sin resultados.</p>';
 }
 function renderFlota() {
@@ -3908,7 +3920,7 @@ function tvRender() {
         <div class="tv-sub">${horario}Jefe de turno: <b>${filled(e.jefe) ? esc(tvShort(e.jefe)) : 'por asignar'}</b></div></div>
       <div class="tv-clock"><b id="tvClock">${hhmm()}</b><span class="${live ? 'live' : ''}">${live ? '● En curso' : 'Última guardada'} · Entrega ${nro} · act. ${tvSeen ? pad(tvSeen.getHours()) + ':' + pad(tvSeen.getMinutes()) : '—'}</span></div>
     </header>
-    <div class="tv-sec tv-movsec">Móviles operativos<span class="tv-info">${store.settings.bencina ? `<i class="tv-fuel">⛽ Cargar en <b>${esc(store.settings.bencina.toUpperCase())}</b></i>` : ''}<i>Abastecimiento: <b>${filled(e.abast) ? esc(e.abast) + (abastFono(e.abast) ? ' · ☎ ' + esc(fonoFmt(abastFono(e.abast))) : '') : 'por asignar'}</b></i><i><b>${operativos}</b> en servicio</i></span></div>
+    <div class="tv-sec tv-movsec">Móviles operativos<span class="tv-info">${bencina() ? `<i class="tv-fuel">⛽ Cargar en <b>${esc(bencina().toUpperCase())}</b></i>` : ''}<i>Abastecimiento: <b>${filled(e.abast) ? esc(e.abast) + (abastFono(e.abast) ? ' · ☎ ' + esc(fonoFmt(abastFono(e.abast))) : '') : 'por asignar'}</b></i><i><b>${operativos}</b> en servicio</i></span></div>
     <div class="tv-mov">${cards}</div>
     <div class="tv-bot">
       <section class="tv-pan" data-tg="nov"><div class="tv-sec">Novedades del turno<span>${items.length ? items.length + (items.length === 1 ? ' novedad' : ' novedades') : ''}</span></div>
