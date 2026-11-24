@@ -1612,7 +1612,7 @@ function alertsOf(e, opts = {}) {
 function statusOf(id, miss, al, e) {
   if (id === 's-generales') { const n = e.generales.filter(g => (num(g.uso) || 0) > 0).length; return n ? {cls:'done', text:`${n} con uso`} : {cls:'opt', text:'Opcional'}; }
   if (id === 's-jefatura') { const n = jefItems(e).length; return n ? {cls:'done', text:`${n} novedad${n > 1 ? 'es' : ''}`} : {cls:'opt', text:'Opcional'}; }
-  if (id === 's-novedades') { const n = novItems(e).length; return n ? {cls:'done', text:`${n} novedad${n > 1 ? 'es' : ''}`} : filled(e.novedades) ? {cls:'done', text:'Registrado'} : {cls:'opt', text:'Opcional'}; }
+  if (id === 's-novedades') { const n = novItems(e).length + autoNovs(e).length; return n ? {cls:'done', text:`${n} novedad${n > 1 ? 'es' : ''}`} : filled(e.novedades) ? {cls:'done', text:'Registrado'} : {cls:'opt', text:'Opcional'}; }
   if (miss[id]) return {cls:'todo', text:`Faltan ${miss[id].length}`};
   return {cls:'done', text:'Completo'};
 }
@@ -1645,6 +1645,8 @@ const SEV_NAME = {r:'Rojo', y:'Amarillo', g:'Verde'}, SEV_RANK = {r:0, y:1, g:2}
 const sevRank = s => SEV_RANK[s] != null ? SEV_RANK[s] : 3;
 /* novedades del turno; incluye las que se anotaron antes en la sección «Novedades de jefatura», que ya no existe */
 const novItems = e => ['novs', 'jefatura'].flatMap(src => Object.keys((e && e[src]) || {}).map(id => Object.assign({id, _src:src}, e[src][id]))).filter(j => j && filled(j.txt)).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+/* novedades automáticas: salen solas mientras se cumpla la condición */
+const autoNovs = e => { const x = (e && e.extr) || {}; return x.rescatar === 'SI' ? [{id:'auto-extr', sev:'g', tag:'Extricación', txt:`Recuperar material de extricación${filled(x.rescatarLugar) ? ' · ' + x.rescatarLugar : ''}`, por:'Automático · desde Material de extricación'}] : []; };
 const sevPick = k => `<div class="sevpick" id="${k}Sev" role="group" aria-label="Color según gravedad"><span class="sl">Color:</span>${['g','y','r'].map(v => `<button type="button" data-act="pickSev" data-for="${k}" data-sev="${v}" aria-pressed="false"><i></i>${SEV_NAME[v]}</button>`).join('')}</div>`;
 function resetSev(k) { const box = $('#' + k + 'Sev'); if (box) { delete box.dataset.sev; box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false')); } const inp = $('#' + k + 'New'); if (inp) { inp.disabled = true; inp.placeholder = 'Primero elige el color'; } }
 const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por ? `<small class="jpor">${esc(j.por)}</small>` : ''}</span><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad">×</button></div>`;
@@ -1652,7 +1654,8 @@ function renderNov() {
   const e = cur(), box = $('#novList'); if (!box) return;
   const items = novItems(e).filter(j => !(vencDay(e) && j.txt === VENC_TXT));
   const venc = vencDay(e) ? `<div class="jitem sev-r"><span class="jh">Hoy</span><span class="jt"><span class="jsev r">Rojo</span>${VENC_TXT}<small class="jpor">Automático · el 30 de cada mes (en febrero, el último día)</small></span></div>` : '';
-  const html = venc + (items.length ? items.map(j => jitemHtml(j, j._src === 'jefatura' ? 'delJef' : 'delNov')).join('') : (venc ? '' : '<p class="muted">Sin novedades en este turno.</p>'));
+  const autos = autoNovs(e).map(j => `<div class="jitem sev-${j.sev}"><span class="jh">Auto</span><span class="jt"><span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>${esc(j.txt)}<small class="jpor">${esc(j.por)}</small></span></div>`).join('');
+  const html = venc + autos + (items.length ? items.map(j => jitemHtml(j, j._src === 'jefatura' ? 'delJef' : 'delNov')).join('') : (venc || autos ? '' : '<p class="muted">Sin novedades en este turno.</p>'));
   if (box.innerHTML !== html) box.innerHTML = html;
   const lg = $('#novLegacy'); if (lg) lg.hidden = !filled(e.novedades);
 }
@@ -2199,7 +2202,7 @@ async function buildPdf(e) {
   const r = e.refri, mo = num(r.momento), mx = num(r.max), mn = num(r.min);
   const rst = mo == null ? 'Sin lectura' : (mo < S.rMin || mo > S.rMax) ? 'Fuera de rango' : ((mx != null && mx > S.rMax) || (mn != null && mn < S.rMin)) ? 'Excursión registrada' : 'En rango';
   sec(`Temperatura refrigerador (rango +${S.rMin} a +${S.rMax} °C)`, {head:[['T° momento', 'T° máxima', 'T° mínima', 'Responsable', 'Estado']], body:cl([[mo != null ? fmtT(mo) + ' °C' : '', mx != null ? fmtT(mx) + ' °C' : '', mn != null ? fmtT(mn) + ' °C' : '', r.resp, rst]])});
-  const novs = novItems(e);
+  const novs = novItems(e).concat(autoNovs(e));
   if (novs.length) sec('Novedades, incidentes u observaciones del turno', {body:cl(novs.map(j => [jefHora(j), SEV_NAME[j.sev] || '', j.txt])).concat(filled(e.novedades) ? [[{content:pdfTxt('Texto anterior: ' + e.novedades), colSpan:3}]] : []), columnStyles:{0:Object.assign({cellWidth:18}, bold), 1:Object.assign({cellWidth:24}, bold)}});
   else sec('Novedades, incidentes u observaciones del turno', {body:cl([[filled(e.novedades) ? e.novedades : 'Sin novedades registradas']])});
   const al = alertsOf(e);
@@ -4054,6 +4057,7 @@ function tvRender() {
   const nvRow = (cls, tag, txt) => `<div class="tv-nv"><span class="tv-tag ${cls}">${esc(tag)}</span><span class="tv-nt">${esc(txt)}</span></div>`;
   const rows = [];
   novItems(e).forEach(j => rows.push({k:sevRank(j.sev), at:String(j.at || ''), html:nvRow(SEV_NAME[j.sev] ? 'sev-' + j.sev : '', 'Novedad' + (jefHora(j) ? ' ' + jefHora(j) : ''), j.txt)}));
+  autoNovs(e).forEach(j => rows.push({k:sevRank(j.sev), at:'~', html:nvRow('sev-' + j.sev, j.tag, j.txt)}));
   String(e.novedades || '').split('\n').map(t => t.replace(/^[\s•\-–]+/, '').trim()).filter(Boolean).forEach(t => rows.push({k:3, at:'~', html:nvRow('', 'Novedad', t)}));
   alertsOf(e).filter(a => a.sev === 'crit' && !TV_SKIP.has(a.sec)).forEach(a => rows.push({k:0, at:'~', html:nvRow('sev-r', a.tag || TV_TAG[a.sec] || secName(a.sec), a.text)}));
   rows.sort((a, b) => a.k - b.k || (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
