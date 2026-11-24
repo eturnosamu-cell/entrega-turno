@@ -1332,7 +1332,7 @@ let resSig = null;
 const isCfgP = p => p && /^(AB\d+|CFG-)/i.test(String(p.clave || ''));
 const staffP = () => (store.settings.personal || []).filter(p => !isCfgP(p));
 const abastList = () => {
-  const fromP = (store.settings.personal || []).filter(p => /^AB\d+$/i.test(p.clave)).sort((a, b) => parseInt(a.clave.slice(2), 10) - parseInt(b.clave.slice(2), 10)).map(p => ({n:p.nombre, f:p.fono || ''}));
+  const fromP = (store.settings.personal || []).filter(p => /^AB\d+$/i.test(p.clave)).sort((a, b) => parseInt(a.clave.slice(2), 10) - parseInt(b.clave.slice(2), 10)).map(p => ({n:p.nombre}));
   return fromP.length ? fromP : (Array.isArray(store.settings.abastList) ? store.settings.abastList.filter(x => x && x.n) : []);
 };
 const bencina = () => { const p = (store.settings.personal || []).find(x => String(x.clave).toUpperCase() === 'CFG-BENCINA'); return p ? p.nombre : (store.settings.bencina || ''); };
@@ -1342,7 +1342,7 @@ function setCfgP(clave, nombre, extra) {
   store.settings.personal = P;
 }
 const fonoFmt = f => { const d = String(f || '').replace(/\D/g, ''); return d.length === 9 ? `${d[0]} ${d.slice(1, 5)} ${d.slice(5)}` : String(f || ''); };
-const abastFono = name => { const x = abastList().find(a => norm(a.n) === norm(name)); return x ? x.f : ''; };
+
 const RES_EST = ['Disponible', 'En taller', 'Préstamo', 'Mantención'];
 const RES_DET = {'En taller':'¿Por qué está en taller?', 'Mantención':'¿Qué mantención?', 'Préstamo':'¿Dónde está prestado?'};
 const resDetOf = (e, num) => String((e && e.reservaDet && e.reservaDet[num]) || '').trim();
@@ -1397,7 +1397,7 @@ function renderForm(e) {
         ${inp('fecha', 'Inicio (fecha y hora)', {type:'datetime-local'})}
         ${staffField('jefe', 'Jefe de turno')}
         ${staffField('subrogante', 'Subrogante')}
-        <label class="fld" for="${fid('abast')}"><span class="lbl">Turno de abastecimiento</span><select id="${fid('abast')}" data-bind="abast"><option value="">Elegir…</option>${abastList().map(a => `<option value="${esc(a.n)}">${esc(a.n)}${a.f ? ' · ' + esc(fonoFmt(a.f)) : ''}</option>`).join('')}${filled(e.abast) && !abastList().some(a => norm(a.n) === norm(e.abast)) ? `<option value="${esc(e.abast)}">${esc(e.abast)}</option>` : ''}</select></label>
+        <label class="fld" for="${fid('abast')}"><span class="lbl">Turno de abastecimiento</span><select id="${fid('abast')}" data-bind="abast"><option value="">Elegir…</option>${abastList().map(a => `<option value="${esc(a.n)}">${esc(a.n)}</option>`).join('')}${filled(e.abast) && !abastList().some(a => norm(a.n) === norm(e.abast)) ? `<option value="${esc(e.abast)}">${esc(e.abast)}</option>` : ''}</select></label>
       </div>
       <p class="tinfo">${e.savedAt ? `<b>Cierre:</b> guardada el ${fmtIso(e.savedAt)}${e.savedBy ? ' por ' + esc(e.savedBy) : ''}` : '<b>Inicio:</b> se pone solo cuando el reanimador toma la entrega. <b>Cierre:</b> queda registrado solo al guardarla.'}</p>`),
     card('s-moviles', 'Móviles y tripulación', `<div class="g-mov">${e.moviles.map((m, i) => movilCard(i, e)).join('')}</div>
@@ -2169,7 +2169,7 @@ async function buildPdf(e) {
     y = doc.lastAutoTable.finalY + 5;
   };
   const yn2 = v => v || '-', bold = {fontStyle:'bold'};
-  sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) : '—', 'Abastecimiento', e.abast ? e.abast + (abastFono(e.abast) ? ' · ' + fonoFmt(abastFono(e.abast)) : '') : '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
+  sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) : '—', 'Abastecimiento', e.abast || '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
   const movs = e.moviles.map((m, i) => Object.assign({}, m, {_b:i === BASICO})).filter(crewAny);
   sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
   const x = e.extr, b = e.bodega, sq = e.salaeq;
@@ -2862,16 +2862,16 @@ const actions = {
   },
   abastEdit() {
     openSheet(`<h2>Personal de abastecimiento</h2>
-      <p class="muted">Una persona por línea: nombre y teléfono, por ejemplo <b>Karina Martínez 937241002</b>. Aparecen para elegir en «Turno de abastecimiento» y el teléfono sale en la TV.</p>
-      <textarea id="abastTxt" rows="8" style="width:100%;font:inherit;padding:8px;border-radius:8px" spellcheck="false">${esc(abastList().map(a => a.n + (a.f ? ' ' + a.f : '')).join('\n'))}</textarea>
+      <p class="muted">Un nombre por línea. Aparecen para elegir en «Turno de abastecimiento» y el elegido sale en la pantalla TV. No se guardan teléfonos.</p>
+      <textarea id="abastTxt" rows="8" style="width:100%;font:inherit;padding:8px;border-radius:8px" spellcheck="false">${esc(abastList().map(a => a.n).join('\n'))}</textarea>
       <div class="sheet-act"><button type="button" class="btn" data-act="settings">Volver a Ajustes</button><button type="button" class="btn primary" data-act="abastSave">Guardar</button></div>`);
   },
   abastSave() {
     const L = (($('#abastTxt') || {}).value || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
       const m = l.match(/^(.*?)[\s:·,;-]*(?:f:|fono:?|tel[eé]fono:?)?\s*(\+?[\d\s]{8,})$/i);
-      return m ? {n:m[1].replace(/[\s:·,;-]+$/, '').trim(), f:m[2].replace(/\D/g, '')} : {n:l, f:''};
+      return {n:(m ? m[1] : l).replace(/[\s:·,;-]+$/, '').trim()};
     }).filter(x => x.n);
-    store.settings.personal = (store.settings.personal || []).filter(p => !/^AB\d+$/i.test(p.clave)).concat(L.map((x, i) => ({clave:'AB' + (i + 1), nombre:x.n, fono:x.f, sup:false})));
+    store.settings.personal = (store.settings.personal || []).filter(p => !/^AB\d+$/i.test(p.clave)).concat(L.map((x, i) => ({clave:'AB' + (i + 1), nombre:x.n, sup:false})));
     delete store.settings.abastList; persist(); renderAll(); toast(`Abastecimiento: ${L.length} persona${L.length === 1 ? '' : 's'} guardada${L.length === 1 ? '' : 's'}`);
     actions.settings();
   },
@@ -3944,7 +3944,7 @@ function tvRender() {
         <div class="tv-sub">${horario}Jefe de turno: <b>${filled(e.jefe) ? esc(tvShort(e.jefe)) : 'por asignar'}</b></div></div>
       <div class="tv-clock"><b id="tvClock">${hhmm()}</b><span class="${live ? 'live' : ''}">${live ? '● En curso' : 'Última guardada'} · Entrega ${nro} · act. ${tvSeen ? pad(tvSeen.getHours()) + ':' + pad(tvSeen.getMinutes()) : '—'}</span></div>
     </header>
-    <div class="tv-sec tv-movsec">Móviles operativos<span class="tv-info">${bencina() ? `<i class="tv-fuel">⛽ Cargar en <b>${esc(bencina().toUpperCase())}</b></i>` : ''}<i>Abastecimiento: <b>${filled(e.abast) ? esc(e.abast) + (abastFono(e.abast) ? ' · ☎ ' + esc(fonoFmt(abastFono(e.abast))) : '') : 'por asignar'}</b></i><i><b>${operativos}</b> en servicio</i></span></div>
+    <div class="tv-sec tv-movsec">Móviles operativos<span class="tv-info">${bencina() ? `<i class="tv-fuel">⛽ Cargar en <b>${esc(bencina().toUpperCase())}</b></i>` : ''}<i>Abastecimiento: <b>${filled(e.abast) ? esc(e.abast) : 'por asignar'}</b></i><i><b>${operativos}</b> en servicio</i></span></div>
     <div class="tv-mov">${cards}</div>
     <div class="tv-bot">
       <section class="tv-pan" data-tg="nov"><div class="tv-sec">Novedades del turno<span>${items.length ? items.length + (items.length === 1 ? ' novedad' : ' novedades') : ''}</span></div>
