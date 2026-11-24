@@ -1175,6 +1175,8 @@ const sameCode = (a, b) => String(a || '').toUpperCase() === String(b || '').toU
 const isEnc = () => { const en = encOf(store.draft); return !!(isRea() && en && sameCode(en.code, SES.code)); };
 const encName = en => en ? accLabel(String(en.code).toUpperCase()) : '';
 const hmOf = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const isAmb = () => !!(SES && SES.token && SES.rol === 'A');
+const opNov = op => op && op.p && op.p[0] === 'live' && op.p[1] === 'draft' && op.p[2] === 'novs';
 const opEnc = op => op && op.p && op.p[0] === 'live' && op.p[1] === 'draft' && op.p[2] === 'enc';
 const canEdit = () => !!(SES && SES.token && (SES.rol === 'J' || SES.admin || isEnc()));
 const canMov = () => canEdit() || !!(SES && SES.token && SES.rol === 'A');
@@ -1690,7 +1692,7 @@ function renderBanner() {
     const amb = SES && SES.rol === 'A', en = encOf(store.draft);
     const quien = en ? `La entrega está a cargo de <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}.` : 'Todavía nadie ha tomado esta entrega.';
     let txt, btn;
-    if (amb) { txt = '<b>Encargado de ambulancias:</b> puedes cambiar el estado de los móviles con el botón <b>Móviles</b>. El resto de la entrega solo se puede mirar.'; btn = '<button type="button" class="btn sm primary" data-act="movEstado">Móviles</button>'; }
+    if (amb) { txt = '<b>Encargado de móviles:</b> puedes cambiar el estado de los móviles y agregar novedades de la flota en cualquier turno. El resto de la entrega solo se puede mirar.'; btn = '<button type="button" class="btn sm primary" data-act="ambNov">Agregar novedad</button><button type="button" class="btn sm" data-act="movEstado">Móviles</button>'; }
     else if (isRea() && !en) { txt = '<b>Nadie ha tomado esta entrega todavía.</b> Si estás de turno, tómala: quedas a cargo y solo tú podrás modificarla hasta que la guardes.'; btn = '<button type="button" class="btn sm primary" data-act="encTake">Tomar la entrega</button>'; }
     else if (isRea()) { txt = `<b>Solo mirar.</b> ${quien} La ves en vivo, pero solo esa persona puede modificarla.`; btn = ''; }
     else { txt = `<b>Solo mirar.</b> ${quien} La llena el reanimador que entra primero en el turno con su código y su clave.`; btn = '<button type="button" class="btn sm primary" data-act="logout">Entrar con clave</button>'; }
@@ -2577,6 +2579,28 @@ const actions = {
     if (!armed(a, 'Confirmar: quitar encargado')) return;
     store.draft.enc = null; persist(); renderAll(); toast('La entrega quedó libre');
   },
+  ambNov() {
+    if (!isAmb() && isRO()) { toast('Entra con la clave del encargado de móviles.'); return; }
+    const me = sesLabel(), mine = Object.entries(store.draft.novs || {}).filter(([, j]) => j && j.por === me).sort((a, b) => String(b[1].at).localeCompare(String(a[1].at)));
+    openSheet(`<h2>Novedad de la flota</h2>
+      <p class="muted">Se agrega a las novedades del turno y sale al tiro en la pantalla TV, ordenada por color.</p>
+      <div class="fld"><span class="lbl">Gravedad</span><div class="sevpick" id="ambSev">${['g', 'y', 'r'].map(k => `<button type="button" data-act="ambSevPick" data-sev="${k}" aria-pressed="false"><i></i>${SEV_NAME[k]}</button>`).join('')}</div></div>
+      <label class="fld" for="ambTxt"><span class="lbl">Novedad</span><textarea id="ambTxt" rows="3" placeholder="Ej. Móvil 90 con falla de frenos, queda en taller hasta el jueves"></textarea></label>
+      <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Cerrar</button><button type="button" class="btn primary" data-act="ambNovSave">Agregar novedad</button></div>
+      ${mine.length ? `<h3>Tus novedades en este turno</h3><div class="jlist">${mine.map(([id, j]) => `<div class="jitem sev-${esc(j.sev || 'g')}"><span class="jh">${hmOf(j.at)}</span><span class="jt">${esc(j.txt)}</span><button type="button" class="linkbtn" data-act="ambNovDel" data-id="${esc(id)}">Quitar</button></div>`).join('')}</div>` : ''}`);
+  },
+  ambSevPick(a) { $$('#ambSev button').forEach(b => b.setAttribute('aria-pressed', b === a ? 'true' : 'false')); $('#ambSev').dataset.sev = a.dataset.sev; const t = $('#ambTxt'); if (t) t.focus(); },
+  ambNovSave() {
+    const sev = ($('#ambSev') || {dataset:{}}).dataset.sev; if (!SEV_NAME[sev]) { toast('Primero elige el color: verde, amarillo o rojo'); return; }
+    const txt = (($('#ambTxt') || {}).value || '').trim(); if (!txt) { $('#ambTxt').focus(); return; }
+    const d = store.draft; if (!d.novs) d.novs = {};
+    d.novs[uid()] = {at:new Date().toISOString(), txt, sev, por:sesLabel()};
+    persist(); refresh(); renderNov(); toast('Novedad agregada'); actions.ambNov();
+  },
+  ambNovDel(a) {
+    const j = (store.draft.novs || {})[a.dataset.id]; if (!j || j.por !== sesLabel() || !armed(a, '¿Quitar?')) return;
+    delete store.draft.novs[a.dataset.id]; persist(); refresh(); renderNov(); actions.ambNov();
+  },
   movEstado() {
     if (!canMov()) { toast('Entra con la clave de ambulancias o de tu turno.'); return; }
     const d = store.draft; if (!d.reserva) d.reserva = {};
@@ -3391,7 +3415,7 @@ function renderAll() {
    (token) que dura el turno; sin ese permiso Google no entrega ni recibe datos.
    La jefatura (MJ, SA) y el administrador entran también a Ajustes y Stock y manejan las claves. */
 const SES_KEY = 'samu-entrega-sesion', OFF_KEY = 'samu-entrega-offline', TV_KEY = 'samu-entrega-tv';
-const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora asistencial', T1:'Turno 1', T2:'Turno 2', T3:'Turno 3', T4:'Turno 4', AMB:'Encargado de ambulancias'};
+const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora asistencial', T1:'Turno 1', T2:'Turno 2', T3:'Turno 3', T4:'Turno 4', AMB:'Encargado de móviles'};
 let SES = null, loginBusy = false, claimAfterLogin = false;
 /* por ahora solo entran los reanimadores (y AMB); estos códigos quedan desactivados, pero sus claves siguen guardadas en Google */
 const BLOQ = ['T1', 'T2', 'T3', 'T4', 'MJ', 'SA'];
@@ -3421,7 +3445,7 @@ function accLabel(code, nombre) {
   const p = store.settings.personal.find(x => x.clave.toUpperCase() === code);
   return p ? shortLabel(p) : code;
 }
-const sesLabel = () => SES ? accLabel(SES.code, SES.rol === 'J' ? SES.nombre : '') : '';
+const sesLabel = () => SES ? accLabel(SES.code, SES.rol === 'J' || SES.rol === 'A' ? SES.nombre : '') : '';
 const sesRol = () => SES ? (SES.admin ? 'J' : SES.rol) : '';
 const needLogin = () => true;
 function loadSes() {
@@ -3576,7 +3600,7 @@ async function accesosSheet() {
   openSheet(`<h2>Claves de acceso</h2>
     <p class="muted">Las claves se guardan en Google, nunca en este archivo. Cada persona entra con su código y su clave (4 a 8 números). Al cambiar una clave, esa persona debe volver a entrar en todos sus equipos.</p>
     <p class="muted">MJ, SA y T1 a T4 están desactivados por ahora: no pueden entrar, pero sus claves siguen guardadas en Google por si se vuelven a activar.</p>
-    <h3>Ambulancias (solo estado de móviles)</h3><div class="acclist">${row('AMB', '', true)}</div>
+    <h3>Encargado de móviles (estado de móviles y novedades de la flota, en cualquier turno)</h3><div class="acclist">${row('AMB', '', true)}</div>
     <h3>Reanimadores (el primero que entra en el turno queda a cargo de la entrega)</h3><div class="acclist">${reas.map(p => row(p.clave.toUpperCase(), titleCase(p.nombre) + (p.sup ? ' (suplente)' : ''), false)).join('')}</div>
     <h3>Cargar varias claves de una vez</h3>
     <p class="muted">Pega la lista con una persona por línea: el código y la clave, por ejemplo <b>R1 5216</b>. Sirve también la tabla copiada tal cual. Se guardan todas en Google con un solo botón.</p>
@@ -3699,7 +3723,7 @@ async function syncCycle() {
     let ops = sdiff(SY.base, sent, [], []);
     const be = SY.base && SY.base.live ? encOf(SY.base.live.draft) : null;
     const wasEnc = isRea() && be && sameCode(be.code, SES.code);
-    ops = canEdit() || wasEnc ? ops : ops.filter(o => (canMov() && opMov(o)) || (isRea() && opEnc(o)));
+    ops = canEdit() || wasEnc ? ops : ops.filter(o => (canMov() && opMov(o)) || (isAmb() && opNov(o)) || (isRea() && opEnc(o)));
     const r = ops.length ? await syncPost({action:'push', since:SY.rev, ops}) : await syncPost({action:'pull', since:SY.rev});
     if (r.fast) sapply(SY.base, ops, r.rev); else mergeResp(SY.base, r);
     if (r.rev !== SY.rev) SY.act = Date.now();
