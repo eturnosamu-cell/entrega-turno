@@ -1325,6 +1325,10 @@ function cascoRows(e) {
   return `<div class="crow rhead" aria-hidden="true"><span>Nº de serie</span><span>Funcionario que lo ocupó</span><span>Entregado</span><span></span></div>${rows || '<p class="muted">Sin cascos registrados en este turno.</p>'}`;
 }
 let resSig = null;
+/* personal de abastecimiento: lista aparte con teléfono, guardada en Google (no en la página pública) */
+const abastList = () => Array.isArray(store.settings.abastList) ? store.settings.abastList.filter(x => x && x.n) : [];
+const fonoFmt = f => { const d = String(f || '').replace(/\D/g, ''); return d.length === 9 ? `${d[0]} ${d.slice(1, 5)} ${d.slice(5)}` : String(f || ''); };
+const abastFono = name => { const x = abastList().find(a => norm(a.n) === norm(name)); return x ? x.f : ''; };
 const RES_EST = ['Disponible', 'En taller', 'Préstamo', 'Mantención'];
 const RES_DET = {'En taller':'¿Por qué está en taller?', 'Mantención':'¿Qué mantención?', 'Préstamo':'¿Dónde está prestado?'};
 const resDetOf = (e, num) => String((e && e.reservaDet && e.reservaDet[num]) || '').trim();
@@ -1379,7 +1383,7 @@ function renderForm(e) {
         ${inp('fecha', 'Inicio (fecha y hora)', {type:'datetime-local'})}
         ${staffField('jefe', 'Jefe de turno')}
         ${staffField('subrogante', 'Subrogante')}
-        ${staffField('abast', 'Turno de abastecimiento')}
+        <label class="fld" for="${fid('abast')}"><span class="lbl">Turno de abastecimiento</span><select id="${fid('abast')}" data-bind="abast"><option value="">Elegir…</option>${abastList().map(a => `<option value="${esc(a.n)}">${esc(a.n)}${a.f ? ' · ' + esc(fonoFmt(a.f)) : ''}</option>`).join('')}${filled(e.abast) && !abastList().some(a => norm(a.n) === norm(e.abast)) ? `<option value="${esc(e.abast)}">${esc(e.abast)}</option>` : ''}</select></label>
       </div>
       <p class="tinfo">${e.savedAt ? `<b>Cierre:</b> guardada el ${fmtIso(e.savedAt)}${e.savedBy ? ' por ' + esc(e.savedBy) : ''}` : '<b>Inicio:</b> se pone solo cuando el reanimador toma la entrega. <b>Cierre:</b> queda registrado solo al guardarla.'}</p>`),
     card('s-moviles', 'Móviles y tripulación', `<div class="g-mov">${e.moviles.map((m, i) => movilCard(i, e)).join('')}</div>
@@ -2151,7 +2155,7 @@ async function buildPdf(e) {
     y = doc.lastAutoTable.finalY + 5;
   };
   const yn2 = v => v || '-', bold = {fontStyle:'bold'};
-  sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) : '—', 'Abastecimiento', e.abast || '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
+  sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) : '—', 'Abastecimiento', e.abast ? e.abast + (abastFono(e.abast) ? ' · ' + fonoFmt(abastFono(e.abast)) : '') : '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
   const movs = e.moviles.map((m, i) => Object.assign({}, m, {_b:i === BASICO})).filter(crewAny);
   sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
   const x = e.extr, b = e.bodega, sq = e.salaeq;
@@ -2820,6 +2824,20 @@ const actions = {
     Object.keys(store.stock.items).forEach(name => { const i = stockInfo(name); if (i && i.disp < i.total) { store.stock.movs.push({id:uid(), at, name, tipo:'repo', cant:i.total - i.disp, por:stkDefPor(), nota:'Reponer todo al total'}); n++; } });
     persist(); renderStockBody(); refresh(); toast(n ? `${n} fármacos repuestos al total` : 'Todo estaba completo');
   },
+  abastEdit() {
+    openSheet(`<h2>Personal de abastecimiento</h2>
+      <p class="muted">Una persona por línea: nombre y teléfono, por ejemplo <b>Karina Martínez 937241002</b>. Aparecen para elegir en «Turno de abastecimiento» y el teléfono sale en la TV.</p>
+      <textarea id="abastTxt" rows="8" style="width:100%;font:inherit;padding:8px;border-radius:8px" spellcheck="false">${esc(abastList().map(a => a.n + (a.f ? ' ' + a.f : '')).join('\n'))}</textarea>
+      <div class="sheet-act"><button type="button" class="btn" data-act="settings">Volver a Ajustes</button><button type="button" class="btn primary" data-act="abastSave">Guardar</button></div>`);
+  },
+  abastSave() {
+    const L = (($('#abastTxt') || {}).value || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+      const m = l.match(/^(.*?)[\s:·,;-]*(?:f:|fono:?|tel[eé]fono:?)?\s*(\+?[\d\s]{8,})$/i);
+      return m ? {n:m[1].replace(/[\s:·,;-]+$/, '').trim(), f:m[2].replace(/\D/g, '')} : {n:l, f:''};
+    }).filter(x => x.n);
+    store.settings.abastList = L; persist(); renderAll(); toast(`Abastecimiento: ${L.length} persona${L.length === 1 ? '' : 's'} guardada${L.length === 1 ? '' : 's'}`);
+    actions.settings();
+  },
   personal() {
     openSheet(`<h2>Personal y claves</h2>
       <p class="muted">En cualquier campo de nombre puedes escribir la clave (R7, PM12, C14) y se completa sola, o elegir de la lista.</p>
@@ -2910,6 +2928,7 @@ const actions = {
       ${SES && SES.admin ? `<div class="srow"><p style="flex:1">Las claves de jefatura, jefes de turno, ambulancias y reanimadores se guardan en Google.</p><button type="button" class="btn sm" data-act="accesos">Ver y cambiar claves</button></div>` : '<p class="muted">Solo la jefatura o el administrador pueden cambiar claves.</p>'}
       <h3>Personal</h3>
       <div class="srow"><p style="flex:1">${store.settings.personal.length} funcionarios con clave (R, PM y C).</p><button type="button" class="btn sm" data-act="personal">Ver y editar nómina</button></div>
+      <div class="srow"><p style="flex:1">${abastList().length} personas de abastecimiento.</p><button type="button" class="btn sm" data-act="abastEdit">Ver y editar abastecimiento</button></div>
       <h3>Móviles</h3>
       <p class="muted">Aparecen en la lista al elegir el móvil. Agrega la patente si quieres verla junto al número.</p>
       <div class="rt" id="flBody"></div>
@@ -3557,7 +3576,7 @@ async function accesosSheet() {
    Cada computador manda solo lo que cambió (campo por campo) y recibe lo que cambiaron los demás.
    Si dos personas escriben el mismo campo a la vez, queda lo último que llegó. */
 const SYNC_KEY = 'samu-entrega-turno-sync';
-const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin','mailJef','bencina'];
+const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin','mailJef','bencina','abastList'];
 const SY = {started:false, rev:null, base:null, busy:false, again:false, soonT:null, tick:null, n:0, last:null, err:'', noScript:false, act:0, adopting:false};
 const clone = o => o === undefined ? undefined : JSON.parse(JSON.stringify(o));
 const stab = o => JSON.stringify(o, (k, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((r, k2) => (r[k2] = v[k2], r), {}) : v);
@@ -3886,7 +3905,7 @@ function tvRender() {
         <div class="tv-sub">${horario}Jefe de turno: <b>${filled(e.jefe) ? esc(tvShort(e.jefe)) : 'por asignar'}</b></div></div>
       <div class="tv-clock"><b id="tvClock">${hhmm()}</b><span class="${live ? 'live' : ''}">${live ? '● En curso' : 'Última guardada'} · Entrega ${nro} · act. ${tvSeen ? pad(tvSeen.getHours()) + ':' + pad(tvSeen.getMinutes()) : '—'}</span></div>
     </header>
-    <div class="tv-sec tv-movsec">Móviles operativos<span class="tv-info">${store.settings.bencina ? `<i class="tv-fuel">⛽ Cargar en <b>${esc(store.settings.bencina.toUpperCase())}</b></i>` : ''}<i>Abastecimiento: <b>${filled(e.abast) ? esc(tvShort(e.abast)) : 'por asignar'}</b></i><i><b>${operativos}</b> en servicio</i></span></div>
+    <div class="tv-sec tv-movsec">Móviles operativos<span class="tv-info">${store.settings.bencina ? `<i class="tv-fuel">⛽ Cargar en <b>${esc(store.settings.bencina.toUpperCase())}</b></i>` : ''}<i>Abastecimiento: <b>${filled(e.abast) ? esc(e.abast) + (abastFono(e.abast) ? ' · ☎ ' + esc(fonoFmt(abastFono(e.abast))) : '') : 'por asignar'}</b></i><i><b>${operativos}</b> en servicio</i></span></div>
     <div class="tv-mov">${cards}</div>
     <div class="tv-bot">
       <section class="tv-pan" data-tg="nov"><div class="tv-sec">Novedades del turno<span>${items.length ? items.length + (items.length === 1 ? ' novedad' : ' novedades') : ''}</span></div>
