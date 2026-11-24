@@ -196,6 +196,7 @@ fieldset#fs{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:
 .grid{display:grid;gap:14px 16px}
 .g2{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.tinfo{margin:12px 0 0;font-size:13.5px;color:var(--ink-3)}.tinfo b{color:var(--ink-2)}
 .g-turno{grid-template-columns:auto minmax(190px,1fr) minmax(170px,1fr) minmax(170px,1fr) minmax(170px,1fr)}
 @media (max-width:1250px){.g-turno{grid-template-columns:auto minmax(190px,1fr) minmax(170px,1fr)}}
 @media (max-width:900px){.g-turno{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -1035,6 +1036,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const pad = n => String(n).padStart(2, '0');
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 const toLocalInput = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmtIso = iso => { const d = iso ? new Date(iso) : null; return d && !isNaN(d) ? fmtDate(toLocalInput(d)) : '—'; };
 const parseLocal = s => { if (!s) return null; const d = new Date(s); return isNaN(d) ? null : d; };
 const fmtDate = s => { const d = parseLocal(s); return d ? `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}` : '—'; };
 const hhmm = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -1374,11 +1376,12 @@ function renderForm(e) {
     `<div class="grp-h" data-g="1"><b>1</b>Turno y móviles</div>`,
     card('s-turno', 'Turno', `<div class="grid g-turno">
         <div class="fld"><span class="lbl" id="l-turno">Turno</span>${seg('turno', ['Largo','Noche'], '', 'l-turno')}</div>
-        ${inp('fecha', 'Fecha y hora', {type:'datetime-local'})}
+        ${inp('fecha', 'Inicio (fecha y hora)', {type:'datetime-local'})}
         ${staffField('jefe', 'Jefe de turno')}
         ${staffField('subrogante', 'Subrogante')}
         ${staffField('abast', 'Turno de abastecimiento')}
-      </div>`),
+      </div>
+      <p class="tinfo">${e.savedAt ? `<b>Cierre:</b> guardada el ${fmtIso(e.savedAt)}${e.savedBy ? ' por ' + esc(e.savedBy) : ''}` : '<b>Inicio:</b> se pone solo cuando el reanimador toma la entrega. <b>Cierre:</b> queda registrado solo al guardarla.'}</p>`),
     card('s-moviles', 'Móviles y tripulación', `<div class="g-mov">${e.moviles.map((m, i) => movilCard(i, e)).join('')}</div>
       <h3 class="subh">Móviles de reposición <span>disponibles en caso de falla de un móvil en servicio</span></h3>
       <div class="rt" id="resBox"></div>`, 'Anota las 3 radios al lado de cada móvil. En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
@@ -1680,7 +1683,7 @@ function renderBanner() {
   }
   if (isRO()) {
     const e = cur();
-    el.innerHTML = `<div class="banner ro"><p>Estás viendo la entrega <b>${folio(e.numero)}</b> del ${fmtDate(e.fecha)}${e.turno ? ' · turno ' + e.turno.toLowerCase() : ''}${encOf(e) ? ' · a cargo de ' + esc(encName(encOf(e))) : ''}. No se puede editar.</p>
+    el.innerHTML = `<div class="banner ro"><p>Estás viendo la entrega <b>${folio(e.numero)}</b> · inicio ${fmtDate(e.fecha)}${e.savedAt ? ' · cierre ' + fmtIso(e.savedAt) : ''}${e.turno ? ' · turno ' + e.turno.toLowerCase() : ''}${encOf(e) ? ' · a cargo de ' + esc(encName(encOf(e))) : ''}. No se puede editar.</p>
       <div class="acts"><button type="button" class="btn sm primary" data-act="backDraft">Volver a la entrega en curso</button><button type="button" class="btn sm" data-act="pdfOne">Descargar PDF</button>${!e.ejemplo && !e.backup ? '<button type="button" class="btn sm" data-act="backupOne">Respaldar</button>' : ''}<button type="button" class="btn sm danger" data-act="delEntry">Eliminar</button></div></div>`;
   } else {
     let h = '';
@@ -2148,7 +2151,7 @@ async function buildPdf(e) {
     y = doc.lastAutoTable.finalY + 5;
   };
   const yn2 = v => v || '-', bold = {fontStyle:'bold'};
-  sec('Turno', {body:cl([['Turno', e.turno, 'Fecha y hora', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante]].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
+  sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) : '—', 'Abastecimiento', e.abast || '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
   const movs = e.moviles.map((m, i) => Object.assign({}, m, {_b:i === BASICO})).filter(crewAny);
   sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
   const x = e.extr, b = e.bodega, sq = e.salaeq;
@@ -3464,7 +3467,9 @@ function enterTest(msg) {
 }
 function takeEnc() {
   if (!isRea() || encOf(store.draft)) return false;
-  store.draft.enc = {code:String(SES.code).toUpperCase(), at:new Date().toISOString()};
+  const now = new Date();
+  store.draft.enc = {code:String(SES.code).toUpperCase(), at:now.toISOString()};
+  store.draft.fecha = toLocalInput(now); /* inicio del turno: la hora en que se toma la entrega */
   persist(); renderAll();
   toast(`Quedaste a cargo de la entrega ${folio(store.settings.nextNum)}`);
   return true;
