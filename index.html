@@ -1333,7 +1333,7 @@ const isCfgP = p => p && /^(AB\d+|CFG-)/i.test(String(p.clave || ''));
 const staffP = () => (store.settings.personal || []).filter(p => !isCfgP(p));
 const abastList = () => {
   const fromP = (store.settings.personal || []).filter(p => /^AB\d+$/i.test(p.clave)).sort((a, b) => parseInt(a.clave.slice(2), 10) - parseInt(b.clave.slice(2), 10)).map(p => ({n:p.nombre}));
-  return fromP.length ? fromP : (Array.isArray(store.settings.abastList) ? store.settings.abastList.filter(x => x && x.n) : []);
+  return fromP;
 };
 const bencina = () => { const p = (store.settings.personal || []).find(x => String(x.clave).toUpperCase() === 'CFG-BENCINA'); return p ? p.nombre : (store.settings.bencina || ''); };
 function setCfgP(clave, nombre, extra) {
@@ -3613,7 +3613,7 @@ async function accesosSheet() {
    Cada computador manda solo lo que cambió (campo por campo) y recibe lo que cambiaron los demás.
    Si dos personas escriben el mismo campo a la vez, queda lo último que llegó. */
 const SYNC_KEY = 'samu-entrega-turno-sync';
-const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin','mailJef','bencina','abastList'];
+const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin','mailJef','bencina'];
 const SY = {started:false, rev:null, base:null, busy:false, again:false, soonT:null, tick:null, n:0, last:null, err:'', noScript:false, act:0, adopting:false};
 const clone = o => o === undefined ? undefined : JSON.parse(JSON.stringify(o));
 const stab = o => JSON.stringify(o, (k, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((r, k2) => (r[k2] = v[k2], r), {}) : v);
@@ -3622,7 +3622,8 @@ const syncOn = () => !framed && !!scriptUrl() && !!authToken() && ((store.settin
 function syncView() {
   /* además de las conocidas, conserva las que ya están en Google: así una versión nueva no pierde datos que esta no conoce */
   const bs = SY.base && SY.base.live && SY.base.live.settings ? Object.keys(SY.base.live.settings) : [];
-  const st = {}; SHARED_SETTINGS.concat(bs.filter(k => !SHARED_SETTINGS.includes(k))).forEach(k => { if (store.settings[k] !== undefined) st[k] = store.settings[k]; });
+  delete store.settings.abastList; /* lista antigua con teléfonos: ya no se guarda */
+  const st = {}; SHARED_SETTINGS.concat(bs.filter(k => !SHARED_SETTINGS.includes(k) && k !== 'abastList')).forEach(k => { if (store.settings[k] !== undefined) st[k] = store.settings[k]; });
   const hist = {}; store.history.forEach(h => { if (h && h.id && !h.ejemplo) hist[h.id] = h; });
   return {live:{draft:store.draft, settings:st, stock:store.stock, recuentos:store.recuentos}, hist};
 }
@@ -3685,7 +3686,7 @@ function syncMeta(save) {
 function adoptSync(next) {
   const L = next.live || {};
   if (L.draft) store.draft = migrateDraft(normalize(clone(L.draft)));
-  if (L.settings) { Object.assign(store.settings, clone(L.settings)); ensureFlota(); }
+  if (L.settings) { Object.assign(store.settings, clone(L.settings)); delete store.settings.abastList; ensureFlota(); }
   if (L.stock) store.stock = clone(L.stock);
   if (Array.isArray(L.recuentos)) store.recuentos = clone(L.recuentos);
   store.history = Object.values(next.hist || {}).filter(h => h && !h._del).map(h => normalize(clone(h)));
@@ -3783,7 +3784,7 @@ async function tvPull() {
     (r.hist || []).forEach(h => { if (h._del) delete TVSY.hist[h.id]; else TVSY.hist[h.id] = h; });
     TVSY.rev = r.rev;
     const L = TVSY.live; if (!L) return false;
-    if (L.settings) { Object.assign(store.settings, clone(L.settings)); ensureFlota(); }
+    if (L.settings) { Object.assign(store.settings, clone(L.settings)); delete store.settings.abastList; ensureFlota(); }
     store.draft = L.draft ? migrateDraft(normalize(clone(L.draft))) : blankEntry();
     if (L.stock) store.stock = clone(L.stock);
     store.history = Object.values(TVSY.hist).map(h => normalize(clone(h)));
