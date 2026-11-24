@@ -903,6 +903,7 @@ html.tvmode body::before{display:none}
 .tv-fsbtn.hide{opacity:0;pointer-events:none}
 .tv-hint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:10px 18px;border-radius:10px;font-size:16px;transition:opacity .6s}
 .genlist{width:100%;border-collapse:collapse;margin:10px 0}.genlist th,.genlist td{border-bottom:1px solid var(--line,#ccc);padding:6px 8px;text-align:left}.genlist td.gk{font:700 1.15em ui-monospace,monospace;letter-spacing:2px}
+.tv-conn{position:fixed;left:16px;bottom:16px;z-index:30;background:#b45309;color:#fff;border:0;border-radius:10px;padding:10px 16px;font:600 15px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.4)}.tv-act{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;background:#fff;color:#111;border-radius:14px;padding:22px;width:min(440px,92vw);display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:15px system-ui,sans-serif}.tv-act[hidden]{display:none}.tv-act b{font-size:18px}.tv-act-f{display:flex;gap:8px}.tv-act-f input{flex:1;min-width:0;font:16px system-ui;padding:9px;border:1px solid #999;border-radius:8px}.tv-act small{color:#b00020;min-height:1.2em}.tv-act-b{display:flex;gap:8px;justify-content:flex-end}.tv-act-b button{font:600 15px system-ui;padding:9px 16px;border-radius:8px;border:1px solid #999;background:#eee;cursor:pointer}.tv-act-b .pri{background:#1e3a8a;color:#fff;border-color:#1e3a8a}
 </style>
 </head>
 <body>
@@ -1400,7 +1401,7 @@ function renderForm(e) {
         ${staffField('subrogante', 'Subrogante')}
         <label class="fld" for="${fid('abast')}"><span class="lbl">Turno de abastecimiento</span><select id="${fid('abast')}" data-bind="abast"><option value="">Elegir…</option>${abastList().map(a => `<option value="${esc(a.n)}">${esc(a.n)}</option>`).join('')}${filled(e.abast) && !abastList().some(a => norm(a.n) === norm(e.abast)) ? `<option value="${esc(e.abast)}">${esc(e.abast)}</option>` : ''}</select></label>
       </div>
-      <p class="tinfo">${e.savedAt ? `<b>Cierre:</b> guardada el ${fmtIso(e.savedAt)}${e.savedBy ? ' por ' + esc(e.savedBy) : ''}` : '<b>Inicio:</b> se pone solo cuando el reanimador toma la entrega. <b>Cierre:</b> queda registrado solo al guardarla.'}</p>`),
+      <p class="tinfo">${e.savedAt ? `<b>Cierre:</b> guardada el ${fmtIso(e.savedAt)}${e.savedBy ? ' por ' + esc(e.savedBy) : ''}${e.cierre ? ' · cerrada con su clave' : ''}` : '<b>Inicio:</b> se pone solo cuando el jefe de turno toma la entrega con su clave. <b>Cierre:</b> queda registrado cuando la cierra con su clave.'}</p>`),
     card('s-moviles', 'Móviles y tripulación', `<div class="g-mov">${e.moviles.map((m, i) => movilCard(i, e)).join('')}</div>
       <h3 class="subh">Móviles de reposición <span>disponibles en caso de falla de un móvil en servicio</span></h3>
       <div class="rt" id="resBox"></div>`, 'Anota las 3 radios al lado de cada móvil. En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
@@ -1694,22 +1695,22 @@ function renderBanner() {
     const quien = en ? `La entrega está a cargo de <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}.` : 'Todavía nadie ha tomado esta entrega.';
     let txt, btn;
     if (amb) { txt = '<b>Encargado de móviles:</b> puedes cambiar el estado de los móviles y agregar novedades de la flota en cualquier turno. El resto de la entrega solo se puede mirar.'; btn = '<button type="button" class="btn sm primary" data-act="ambNov">Agregar novedad</button><button type="button" class="btn sm" data-act="movEstado">Móviles</button>'; }
-    else if (isRea() && !en) { txt = '<b>Nadie ha tomado esta entrega todavía.</b> Si estás de turno, tómala: quedas a cargo y solo tú podrás modificarla hasta que la guardes.'; btn = '<button type="button" class="btn sm primary" data-act="encTake">Tomar la entrega</button>'; }
-    else if (isRea()) { txt = `<b>Solo mirar.</b> ${quien} La ves en vivo, pero solo esa persona puede modificarla.`; btn = ''; }
-    else { txt = `<b>Solo mirar.</b> ${quien} La llena el reanimador que entra primero en el turno con su código y su clave.`; btn = '<button type="button" class="btn sm primary" data-act="logout">Entrar con clave</button>'; }
+    else if (isRea() && !en) { txt = '<b>MODO SOLO MIRAR.</b> Nadie ha tomado esta entrega todavía. Si eres el jefe de turno, toca «Soy el jefe de turno» y confirma con tu clave: solo tú podrás modificarla. Si entraste a mirar, no tienes que hacer nada.'; btn = '<button type="button" class="btn sm primary" data-act="encTake">Soy el jefe de turno</button>'; }
+    else if (isRea()) { txt = `<b>MODO SOLO MIRAR.</b> El jefe de turno a cargo es <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}. Ves la entrega en vivo, pero no puedes modificar nada.`; btn = ''; }
+    else { txt = `<b>MODO SOLO MIRAR.</b> ${quien} Solo el jefe de turno la modifica, después de confirmar con su clave.`; btn = '<button type="button" class="btn sm primary" data-act="logout">Entrar con clave</button>'; }
     el.innerHTML = `<div class="banner ro"><p>${txt}</p>${btn ? `<div class="acts">${btn}</div>` : ''}</div>`;
     return;
   }
   if (isRO()) {
     const e = cur();
-    el.innerHTML = `<div class="banner ro"><p>Estás viendo la entrega <b>${folio(e.numero)}</b> · inicio ${fmtDate(e.fecha)}${e.savedAt ? ' · cierre ' + fmtIso(e.savedAt) : ''}${e.turno ? ' · turno ' + e.turno.toLowerCase() : ''}${encOf(e) ? ' · a cargo de ' + esc(encName(encOf(e))) : ''}. No se puede editar.</p>
+    el.innerHTML = `<div class="banner ro"><p>Estás viendo la entrega <b>${folio(e.numero)}</b> · inicio ${fmtDate(e.fecha)}${e.savedAt ? ' · cierre ' + fmtIso(e.savedAt) : ''}${e.cierre ? ' por ' + esc(e.cierre.por) + ' con su clave' : ''}${e.turno ? ' · turno ' + e.turno.toLowerCase() : ''}${encOf(e) ? ' · a cargo de ' + esc(encName(encOf(e))) : ''}. No se puede editar.</p>
       <div class="acts"><button type="button" class="btn sm primary" data-act="backDraft">Volver a la entrega en curso</button><button type="button" class="btn sm" data-act="pdfOne">Descargar PDF</button>${!e.ejemplo && !e.backup ? '<button type="button" class="btn sm" data-act="backupOne">Respaldar</button>' : ''}<button type="button" class="btn sm danger" data-act="delEntry">Eliminar</button></div></div>`;
   } else {
     let h = '';
     const en = encOf(store.draft);
-    if (isEnc()) h += `<div class="banner enc"><p><b>Estás a cargo de esta entrega</b> desde las ${hmOf(en.at)}. Solo tú puedes modificarla hasta que la guardes; los demás la ven en vivo.</p><div class="acts"><button type="button" class="btn sm" data-act="encLeave">Dejar la entrega</button></div></div>`;
-    else if (en) h += `<div class="banner enc"><p>Entrega a cargo de <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}.</p><div class="acts"><button type="button" class="btn sm" data-act="encClear">Quitar encargado</button></div></div>`;
-    else h += `<div class="banner enc"><p>Todavía ningún reanimador ha tomado esta entrega. El primero que entre con su clave quedará a cargo.</p></div>`;
+    if (isEnc()) h += `<div class="banner enc"><p><b>Eres el jefe de turno a cargo</b> desde las ${hmOf(en.at)}. Solo tú puedes modificar la entrega; los demás solo la miran. Al terminar, ciérrala con «Guardar entrega» y tu clave.</p><div class="acts"><button type="button" class="btn sm" data-act="encLeave">Dejar la entrega</button></div></div>`;
+    else if (en) h += `<div class="banner enc"><p>Jefe de turno a cargo: <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}. Como administrador puedes corregir, pero solo esa persona cierra la entrega con su clave.</p><div class="acts"><button type="button" class="btn sm" data-act="encClear">Quitar encargado</button></div></div>`;
+    else h += `<div class="banner enc"><p>Todavía nadie ha tomado esta entrega como jefe de turno. Como administrador puedes corregir, pero para cerrarla alguien tiene que tomarla con su clave.</p>${isRea() ? '<div class="acts"><button type="button" class="btn sm primary" data-act="encTake">Soy el jefe de turno</button></div>' : ''}</div>`;
     const pend = pendingBackups().length;
     const due = recuentoDue();
     if (due) h += `<div class="banner bk"><p><b>${due.today ? 'Hoy es viernes: toca el recuento de otros medicamentos.' : `Quedó pendiente el recuento del viernes ${due.fecha}.`}</b> Cuenta el mueble y el sistema calcula cuánto reponer.</p><div class="acts"><button type="button" class="btn sm primary" data-act="recuento">Hacer recuento</button></div></div>`;
@@ -2170,7 +2171,7 @@ async function buildPdf(e) {
     y = doc.lastAutoTable.finalY + 5;
   };
   const yn2 = v => v || '-', bold = {fontStyle:'bold'};
-  sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) : '—', 'Abastecimiento', e.abast || '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
+  sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) + (e.cierre ? ' · cerrada por ' + e.cierre.por + ' con su clave' : '') : '—', 'Abastecimiento', e.abast || '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
   const movs = e.moviles.map((m, i) => Object.assign({}, m, {_b:i === BASICO})).filter(crewAny);
   sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
   const x = e.extr, b = e.bodega, sq = e.salaeq;
@@ -2531,6 +2532,11 @@ const actions = {
   toggleTable(a) { const k = a.dataset.k; showTables[k] = !showTables[k]; renderChart(k); },
   save() {
     if (isRO()) return;
+    if (!isEnc()) {
+      const en = encOf(store.draft);
+      openSheet(`<h2>Cerrar la entrega</h2><p>${en ? `Solo <b>${esc(encName(en))}</b>, el jefe de turno a cargo, puede cerrar esta entrega con su clave.${SES && SES.admin ? ' Si esa persona ya no está, usa «Quitar encargado» y tómala tú con «Soy el jefe de turno».' : ''}` : 'Para cerrar la entrega, primero el jefe de turno tiene que tomarla con «Soy el jefe de turno» y su clave.'}</p><div class="sheet-act"><button type="button" class="btn primary" data-act="closeSheet">Entendido</button></div>`);
+      return;
+    }
     const e = store.draft, miss = sectionMissing(e), al = alertsOf(e, {stock:true});
     const list = Object.entries(miss).flatMap(([sec, arr]) => arr.map(t => ({sec, t})));
     const bySec = {}; list.forEach(x => (bySec[x.sec] = bySec[x.sec] || []).push(x.t));
@@ -2538,8 +2544,22 @@ const actions = {
       <p class="muted">${e.turno ? 'Turno ' + e.turno.toLowerCase() + ' · ' : ''}${fmtDate(e.fecha)}${filled(e.jefe) ? ' · Jefe de turno: ' + esc(e.jefe) : ''}</p>
       ${list.length ? `<div class="sblock warn"><h3>Faltan ${list.length} datos</h3><ul>${Object.entries(bySec).map(([sec, arr]) => `<li><button type="button" class="linkbtn" data-act="go" data-id="${sec}">${esc(secName(sec))}</button>: ${arr.map(esc).join(' · ')}</li>`).join('')}</ul></div>` : `<div class="sblock ok">✓ Todos los datos obligatorios están completos.</div>`}
       ${al.length ? `<div class="sblock"><h3>Alertas que quedarán registradas</h3><ul>${al.map(x => `<li>${x.sev === 'crit' ? '<b>Crítica:</b> ' : x.sev === 'warn' ? '<b>Aviso:</b> ' : ''}${esc(x.text)}</li>`).join('')}</ul></div>` : ''}
-      <p class="muted">Al guardar, la entrega pasa al historial y queda de solo lectura. Se abre una entrega nueva en blanco${encOf(e) ? ', libre para que la tome el reanimador del turno siguiente' : ''}.${(store.settings.backup || {}).auto !== false ? (backupMode() === 'drive' || backupMode() === 'script' ? ' Se crea el PDF y se sube a Google Drive.' : backupMode() === 'folder' ? ' Se crea el PDF y se guarda en la carpeta de respaldo.' : backupMode() === 'none' ? '' : ' Se crea el PDF de la entrega.') : ''}</p>
-      <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Seguir editando</button><button type="button" class="btn primary" data-act="confirmSave">${list.length ? 'Guardar de todas formas' : 'Guardar entrega'}</button></div>`);
+      <p class="muted">Al guardar, la entrega pasa al historial y queda de solo lectura. Se abre una entrega nueva en blanco${encOf(e) ? ', libre para que la tome el jefe del turno siguiente con su clave' : ''}.${(store.settings.backup || {}).auto !== false ? (backupMode() === 'drive' || backupMode() === 'script' ? ' Se crea el PDF y se sube a Google Drive.' : backupMode() === 'folder' ? ' Se crea el PDF y se guarda en la carpeta de respaldo.' : backupMode() === 'none' ? '' : ' Se crea el PDF de la entrega.') : ''}</p>
+      <label class="fld" for="cierrePin"><span class="lbl">Cierra con tu clave (${esc(String(SES.code).toUpperCase())})</span><input type="password" id="cierrePin" inputmode="numeric" maxlength="8" autocomplete="current-password" style="max-width:220px;font-size:1.2em;letter-spacing:4px"></label><p id="cierrePinErr" style="color:#b00020;font-weight:600;min-height:1.2em;margin:4px 0"></p>
+      <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Seguir editando</button><button type="button" class="btn primary" data-act="saveSign">${list.length ? 'Cerrar de todas formas con mi clave' : 'Cerrar entrega con mi clave'}</button></div>`);
+    setTimeout(() => { const i = $('#cierrePin'); if (i) i.focus(); }, 60);
+  },
+  async saveSign(a) {
+    if (!isEnc()) return;
+    const inp = $('#cierrePin'), err = $('#cierrePinErr'); if (!inp) return;
+    const auto = (store.settings.backup || {}).auto !== false;
+    SAVE_PERM = auto && backupMode() === 'folder' ? folderPerm(true) : null; /* se pide con el toque, antes de esperar a Google */
+    const lab = a.textContent; a.disabled = true; a.textContent = 'Verificando…';
+    const r = await verifyPin((inp.value || '').trim());
+    if (!r.ok) { err.textContent = r.msg; inp.value = ''; inp.focus(); a.disabled = false; a.textContent = lab; return; }
+    if (!isEnc()) { closeSheet(); toast('Ya no estás a cargo de esta entrega'); return; }
+    store.draft.cierre = {code:String(SES.code).toUpperCase(), por:sesLabel(), at:new Date().toISOString(), via:r.via};
+    actions.confirmSave();
   },
   verSolo() { enterTest(); },
   fafMail(a) {
@@ -2568,6 +2588,21 @@ const actions = {
     if (!isRea()) { toast('Para tomar la entrega entra con tu código de reanimador y tu clave.'); return; }
     if (syncOn()) { try { await syncNow(); } catch (e) {} }
     const en = encOf(store.draft);
+    if (en) { renderAll(); toast(`La entrega ya la tomó ${encName(en)}`); return; }
+    openSheet(`<h2>Soy el jefe de turno</h2>
+      <p>Quedas a cargo de la entrega ${folio(store.settings.nextNum)}: <b>solo tú podrás modificarla</b> y al terminar la cierras con tu clave. Los demás solo pueden mirar. Tu nombre queda como jefe de turno y la hora de inicio se pone sola.</p>
+      <label class="fld" for="encPin"><span class="lbl">Confirma con tu clave (${esc(String(SES.code).toUpperCase())})</span><input type="password" id="encPin" inputmode="numeric" maxlength="8" autocomplete="current-password" style="max-width:220px;font-size:1.2em;letter-spacing:4px"></label><p id="encPinErr" style="color:#b00020;font-weight:600;min-height:1.2em;margin:4px 0"></p>
+      <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Cancelar</button><button type="button" class="btn primary" data-act="encTakeOk">Confirmar con mi clave</button></div>`);
+    setTimeout(() => { const i = $('#encPin'); if (i) i.focus(); }, 60);
+  },
+  async encTakeOk(a) {
+    const inp = $('#encPin'), err = $('#encPinErr'); if (!inp) return;
+    a.disabled = true; a.textContent = 'Verificando…';
+    const r = await verifyPin((inp.value || '').trim());
+    if (!r.ok) { err.textContent = r.msg; inp.value = ''; inp.focus(); a.disabled = false; a.textContent = 'Confirmar con mi clave'; return; }
+    if (syncOn()) { try { await syncNow(); } catch (e) {} }
+    const en = encOf(store.draft);
+    closeSheet();
     if (en) { renderAll(); toast(`La entrega ya la tomó ${encName(en)}`); return; }
     takeEnc();
   },
@@ -2684,8 +2719,9 @@ const actions = {
     catch (e) { toast('No se pudo quitar el acceso: revisa internet'); }
   },
   confirmSave() {
+    if (!store.draft.cierre || !isEnc()) return; /* solo desde saveSign, con la clave del jefe */
     const auto = (store.settings.backup || {}).auto !== false;
-    const permP = auto && backupMode() === 'folder' ? folderPerm(true) : null;
+    const permP = SAVE_PERM; SAVE_PERM = null;
     const e = store.draft, hadUse = [e.controlados, e.generales, e.parches].some(arr => arr.some(x => (num(x.uso) || 0) > 0));
     e.numero = store.settings.nextNum; e.savedAt = new Date().toISOString();
     if (SES) e.savedBy = sesLabel();
@@ -3454,7 +3490,7 @@ function renderAll() {
    La jefatura (MJ, SA) y el administrador entran también a Ajustes y Stock y manejan las claves. */
 const SES_KEY = 'samu-entrega-sesion', OFF_KEY = 'samu-entrega-offline', TV_KEY = 'samu-entrega-tv';
 const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora asistencial', T1:'Turno 1', T2:'Turno 2', T3:'Turno 3', T4:'Turno 4', AMB:'Encargado de móviles'};
-let SES = null, loginBusy = false, claimAfterLogin = false;
+let SES = null, loginBusy = false, claimAfterLogin = false, OFF_PIN = '', offBusy = false;
 /* por ahora solo entran los reanimadores (y AMB); estos códigos quedan desactivados, pero sus claves siguen guardadas en Google */
 const BLOQ = ['T1', 'T2', 'T3', 'T4', 'MJ', 'SA'];
 const TEST_TOK = 'samu-entrega-prueba';
@@ -3475,7 +3511,10 @@ async function testInit() {
     return true;
   } catch (e) { return false; }
 }
-const authToken = () => (SES && SES.token) || (document.documentElement.classList.contains('tvmode') ? (tvToken() || testToken()) : testToken());
+const TV_LAST = {tok:''};
+/* el TV relee la sesión guardada en este computador cada vez (alguien pudo entrar después de abrir el TV) */
+const tvSesToken = () => { try { const v = JSON.parse(localStorage.getItem(SES_KEY) || 'null'); return v && v.token && v.exp > Date.now() ? v.token : ''; } catch (e) { return ''; } };
+const authToken = () => document.documentElement.classList.contains('tvmode') ? (tvToken() || tvSesToken() || TV_LAST.tok || (SES && SES.token) || testToken()) : ((SES && SES.token) || testToken());
 const tvToken = () => { try { return localStorage.getItem(TV_KEY) || ''; } catch (e) { return ''; } };
 function accLabel(code, nombre) {
   if (code === 'PRUEBA') return 'Solo mirar';
@@ -3487,7 +3526,7 @@ const sesLabel = () => SES ? accLabel(SES.code, SES.rol === 'J' || SES.rol === '
 const sesRol = () => SES ? (SES.admin ? 'J' : SES.rol) : '';
 const needLogin = () => true;
 function loadSes() {
-  try { const v = JSON.parse(localStorage.getItem(SES_KEY) || 'null'); if (v && v.code && v.exp > Date.now() && (v.admin || !BLOQ.includes(String(v.code).toUpperCase()))) SES = v; else localStorage.removeItem(SES_KEY); } catch (e) {}
+  try { const v = JSON.parse(localStorage.getItem(SES_KEY) || 'null'); if (v && v.code && v.exp > Date.now() && (v.token || v.prueba) && (v.admin || !BLOQ.includes(String(v.code).toUpperCase()))) SES = v; else localStorage.removeItem(SES_KEY); } catch (e) {}
 }
 function paintUser() {
   const box = $('#userBox'); if (!box) return;
@@ -3563,13 +3602,15 @@ function takeEnc() {
   if (!isRea() || encOf(store.draft)) return false;
   const now = new Date();
   store.draft.enc = {code:String(SES.code).toUpperCase(), at:now.toISOString()};
+  { const me = (store.settings.personal || []).find(p => String(p.clave).toUpperCase() === store.draft.enc.code); if (me) store.draft.jefe = staffLabel(me); }
   store.draft.fecha = toLocalInput(now); /* inicio del turno: la hora en que se toma la entrega */
   persist(); renderAll();
-  toast(`Quedaste a cargo de la entrega ${folio(store.settings.nextNum)}`);
+  toast(`Quedaste como jefe de turno a cargo de la entrega ${folio(store.settings.nextNum)}`);
   return true;
 }
 function autoClaim() { if (view.mode === 'draft' && isRea() && !encOf(store.draft)) takeEnc(); else renderAll(); }
 function hideLogin() { pickerOpen = false; $('#loginHost').innerHTML = ''; document.getElementById('app').removeAttribute('aria-hidden'); }
+function offForget(code, pin) { try { const off = JSON.parse(localStorage.getItem(OFF_KEY) || '{}'); if (off[code] && off[code].v === pinHash('equipo:' + pin)) { delete off[code]; localStorage.setItem(OFF_KEY, JSON.stringify(off)); } } catch (e) {} }
 const LOGIN_ERR = {clave:'Clave incorrecta.', codigo:'No existe ese código o todavía no tiene clave. Pídela a la jefatura.', bloqueado:'Demasiados intentos con ese código. Espera 15 minutos.', bloqueo_general:'Demasiados intentos fallidos en el sistema. Espera unos minutos.', permiso:'Ese código no tiene permiso para esto.'};
 async function loginCall(code, pin, device) {
   const url = scriptCfg().url; if (!url) throw {code:'net'};
@@ -3588,9 +3629,9 @@ async function tryLogin() {
   loginBusy = true; btn.disabled = true; btn.textContent = 'Verificando…'; err.textContent = '';
   try {
     const j = await loginCall(code, pin);
-    if (!j.ok) { err.textContent = LOGIN_ERR[j.error] || 'No se pudo entrar.'; $('#logPin').value = ''; return; }
+    if (!j.ok) { if (j.error === 'clave' || j.error === 'codigo') offForget(code, pin); err.textContent = LOGIN_ERR[j.error] || 'No se pudo entrar.'; $('#logPin').value = ''; return; }
     if (BLOQ.includes(code) && !j.admin) { err.textContent = 'Ese código está desactivado por ahora. Entra con tu código de reanimador (R1, R2…).'; $('#logPin').value = ''; return; }
-    SES = {code:j.code, rol:j.rol, admin:!!j.admin, nombre:j.nombre || '', token:j.token, exp:j.exp};
+    SES = {code:j.code, rol:j.rol, admin:!!j.admin, nombre:j.nombre || '', token:j.token, exp:j.exp}; OFF_PIN = '';
     /* para poder entrar en este mismo equipo si se corta internet */
     try { const off = JSON.parse(localStorage.getItem(OFF_KEY) || '{}'); off[code] = {v:pinHash('equipo:' + pin), rol:j.rol, admin:!!j.admin, nombre:j.nombre || '', at:Date.now()}; localStorage.setItem(OFF_KEY, JSON.stringify(off)); } catch (e) {}
   } catch (e) {
@@ -3599,17 +3640,17 @@ async function tryLogin() {
     const o = off[code];
     if (!o || o.v !== pinHash('equipo:' + pin) || Date.now() - o.at > 30 * 864e5) { err.textContent = 'Sin conexión con Google. Para entrar sin internet, esta persona debe haber entrado antes en este equipo.'; return; }
     if (BLOQ.includes(code) && !o.admin) { err.textContent = 'Ese código está desactivado por ahora. Entra con tu código de reanimador (R1, R2…).'; return; }
-    SES = {code, rol:o.rol, admin:o.admin, nombre:o.nombre, token:'', exp:Date.now() + 14 * 3600e3};
+    SES = {code, rol:o.rol, admin:o.admin, nombre:o.nombre, token:'', exp:Date.now() + 14 * 3600e3}; OFF_PIN = pin;
   } finally { loginBusy = false; if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = 'Entrar'; } }
   try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {}
   hideLogin(); paintUser(); permChanged(); toast(`Hola, ${sesLabel()}`);
-  claimAfterLogin = isRea();
+  claimAfterLogin = false;
   SY.noScript = false; SY.rev = null; syncStart(); syncSoon();
   if (claimAfterLogin && !syncOn()) { claimAfterLogin = false; autoClaim(); }
   if (pendingBackups().length && backupMode() !== 'none') runBackups(pendingBackups(), {quiet:true});
 }
 function logout(msg) {
-  SES = null; try { localStorage.removeItem(SES_KEY); } catch (e) {}
+  OFF_PIN = ''; SES = null; try { localStorage.removeItem(SES_KEY); } catch (e) {}
   settingsUntil = 0; closeSheet(); paintUser();
   if (hasTest()) startEntry(msg); else { syncStop(); showLogin(msg); }
 }
@@ -3620,8 +3661,50 @@ document.addEventListener('input', ev => {
   const code = ev.target.value.replace(/[\s·-]/g, '').toUpperCase(), w = $('#logWho');
   if (w) w.textContent = BLOQ.includes(code) ? `${JEF_NOMBRE[code]} · desactivado por ahora` : JEF_NOMBRE[code] || (store.settings.personal.some(x => x.clave.toUpperCase() === code) ? accLabel(code) : '');
 });
+/* confirma la clave de quien está conectado (para tomar y para cerrar la entrega) */
+async function verifyPin(pin) {
+  const code = String(SES && SES.code || '').toUpperCase();
+  if (!/^\d{4,8}$/.test(pin)) return {ok:false, msg:'Escribe tu clave (4 a 8 números).'};
+  try {
+    const j = await loginCall(code, pin);
+    if (j && j.ok) { if (j.token && SES) { SES.token = j.token; SES.exp = j.exp; try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {} } return {ok:true, via:'google'}; }
+    return {ok:false, msg:(j && LOGIN_ERR[j.error]) || 'Clave incorrecta.'};
+  } catch (e) {
+    let off = {}; try { off = JSON.parse(localStorage.getItem(OFF_KEY) || '{}'); } catch (x) {}
+    const o = off[code];
+    if (o && o.v === pinHash('equipo:' + pin)) return {ok:true, via:'equipo'};
+    return {ok:false, msg:'Sin conexión con Google, y esa clave no está registrada en este equipo.'};
+  }
+}
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter' || !ev.target || !ev.target.id) return;
+  const b = ev.target.id === 'encPin' ? $('[data-act="encTakeOk"]') : ev.target.id === 'cierrePin' ? $('[data-act="saveSign"]') : null;
+  if (b) { ev.preventDefault(); b.click(); }
+});
+/* entró sin conexión: cada 30 s intenta conectarse con Google con la misma clave (solo en memoria) */
+async function offRetry() {
+  if (offBusy || !SES || SES.token || SES.prueba || !OFF_PIN || document.documentElement.classList.contains('tvmode')) return;
+  offBusy = true; const code = String(SES.code).toUpperCase(), pin = OFF_PIN;
+  try {
+    const j = await loginCall(code, pin);
+    if (!SES || String(SES.code).toUpperCase() !== code) return;
+    if (!j.ok) {
+      if (j.error === 'clave' || j.error === 'codigo' || j.error === 'permiso') { offForget(code, pin); logout(j.error === 'clave' ? 'Tu clave cambió. Entra con tu clave nueva.' : 'Ese código ya no tiene acceso.'); }
+      return;
+    }
+    if (BLOQ.includes(code) && !j.admin) { logout('Ese código está desactivado por ahora.'); return; }
+    SES = {code:j.code, rol:j.rol, admin:!!j.admin, nombre:j.nombre || '', token:j.token, exp:j.exp}; OFF_PIN = '';
+    try { localStorage.setItem(SES_KEY, JSON.stringify(SES)); } catch (e) {}
+    try { const off = JSON.parse(localStorage.getItem(OFF_KEY) || '{}'); off[code] = {v:pinHash('equipo:' + pin), rol:j.rol, admin:!!j.admin, nombre:j.nombre || '', at:Date.now()}; localStorage.setItem(OFF_KEY, JSON.stringify(off)); } catch (e) {}
+    paintUser(); permChanged(); toast('Conectado con Google: lo que escribiste ya se está enviando');
+    claimAfterLogin = false; SY.noScript = false; SY.rev = null; syncStart(); syncSoon();
+  } catch (e) { /* sigue sin conexión: se reintenta */ }
+  finally { offBusy = false; }
+}
+setInterval(offRetry, 30000);
+window.addEventListener('online', () => setTimeout(offRetry, 1500));
 /* la sesión venció o la clave cambió en otro equipo */
-let GEN_HOLD = false, GEN_LOST = false, GEN_LIST = [];
+let SAVE_PERM = null, GEN_HOLD = false, GEN_LOST = false, GEN_LIST = [];
 function authLost() { if (document.documentElement.classList.contains('tvmode')) return; if (GEN_HOLD) { GEN_LOST = true; return; } if (SES && SES.prueba) { try { localStorage.removeItem(TEST_TOK); } catch (e) {} } if (SES) logout('Tu sesión venció o tu clave cambió. Vuelve a entrar.'); }
 
 async function accesosSheet() {
@@ -3817,10 +3900,11 @@ function syncPaint() {
 const TVSY = {rev:0, live:null, hist:{}, busy:false};
 async function tvPull() {
   if (!syncOn() || TVSY.busy) return false;
-  if (!authToken()) return false;
+  const tok = authToken(); if (!tok) { TVSY.ok = 0; tvActPaint(); return false; }
   TVSY.busy = true;
   try {
     const r = await syncPost({action:'pull', since:TVSY.rev});
+    TVSY.ok = Date.now(); if (tok !== tvToken()) TV_LAST.tok = tok; tvActPaint();
     if (r.rev === TVSY.rev) return false;
     if (r.live) TVSY.live = r.live;
     (r.hist || []).forEach(h => { if (h._del) delete TVSY.hist[h.id]; else TVSY.hist[h.id] = h; });
@@ -3832,12 +3916,18 @@ async function tvPull() {
     store.history = Object.values(TVSY.hist).map(h => normalize(clone(h)));
     ensureStock(); sortHistory(); tvSeen = new Date();
     return true;
-  } catch (e) { if (e && e.code === 'auth') { try { localStorage.removeItem(TV_KEY); } catch (x) {} tvActPaint(); } return false; }
+  } catch (e) {
+    if (e && e.code === 'auth') { if (tok === tvToken()) { try { localStorage.removeItem(TV_KEY); } catch (x) {} } if (tok === TV_LAST.tok) TV_LAST.tok = ''; TVSY.ok = 0; }
+    else if (TVSY.ok && Date.now() - TVSY.ok > 60000) TVSY.ok = 0;
+    tvActPaint(); return false;
+  }
   finally { TVSY.busy = false; }
 }
 function tvActPaint() {
-  const box = document.getElementById('tvAct'); if (!box) return;
-  box.hidden = !!(tvToken() || testToken());
+  const b = document.getElementById('tvConn'); if (!b) return;
+  const ok = !!TVSY.ok, pend = TVSY.ok === undefined && !!authToken();
+  b.hidden = ok || pend; b.textContent = authToken() ? '● Sin conexión con Google: reintentando…' : '● Esta pantalla solo muestra lo editado en ESTE computador. Toca aquí para conectarla a Google';
+  const box = document.getElementById('tvAct'); if (box && ok) box.hidden = true;
 }
 async function tvActivate() {
   const code = (document.getElementById('tvCode').value || '').replace(/[\s·-]/g, '').toUpperCase(), pin = document.getElementById('tvPin').value || '', err = document.getElementById('tvActErr');
@@ -3846,7 +3936,10 @@ async function tvActivate() {
   try {
     const j = await loginCall(code, pin, 'tv');
     if (!j.ok) { err.textContent = LOGIN_ERR[j.error] || 'No se pudo activar.'; return false; }
-    localStorage.setItem(TV_KEY, j.token); err.textContent = ''; document.getElementById('tvPin').value = '';
+    localStorage.setItem(TV_KEY, j.token); err.textContent = ''; document.getElementById('tvPin').value = ''; document.getElementById('tvCode').value = '';
+    const bx = document.getElementById('tvAct'); if (bx) bx.hidden = true;
+    const hasta = j.exp ? new Date(j.exp).toLocaleDateString('es-CL') : '';
+    const h = document.getElementById('tvHint'); if (h) { h.textContent = '● Pantalla conectada a Google' + (hasta ? ' hasta el ' + hasta : ''); h.style.opacity = '1'; }
     tvActPaint(); window.dispatchEvent(new Event('resize')); TVSY.rev = 0; tvPull().then(ch => { if (ch) tvRender(); });
     return true;
   } catch (e) { err.textContent = 'Sin conexión con Google.'; return false; }
@@ -4014,6 +4107,10 @@ function startTV() {
   document.getElementById('app').hidden = true;
   const host = document.createElement('div');
   host.id = 'tv'; host.innerHTML = '<div class="tvs" id="tvStage"></div><div class="tv-hint" id="tvHint"></div>'
+    + '<button type="button" class="tv-conn" id="tvConn" hidden></button>'
+    + '<div class="tv-act" id="tvAct" hidden><b>Conectar esta pantalla a Google</b><span>Así muestra lo que se edita en cualquier computador. Se hace una sola vez en este equipo, con el código y la clave del administrador.</span>'
+    + '<div class="tv-act-f"><input id="tvCode" placeholder="Código" autocapitalize="characters" autocomplete="off"><input id="tvPin" type="password" inputmode="numeric" placeholder="Clave" autocomplete="off"></div><small id="tvActErr"></small>'
+    + '<div class="tv-act-b"><button type="button" id="tvActCancel">Cancelar</button><button type="button" id="tvActGo" class="pri">Conectar</button></div></div>'
     + '<button type="button" class="tv-fsbtn" id="tvFsBtn" hidden>⛶ Pantalla completa</button>';
   document.body.appendChild(host);
   loadSes(); /* si en este computador hay alguien con sesión, el TV usa ese permiso para leer de Google */
@@ -4047,6 +4144,12 @@ function startTV() {
   };
   let TV_GO_DONE = true;
   tvActPaint();
+  const actBox = document.getElementById('tvAct');
+  ['click', 'dblclick'].forEach(t => { actBox.addEventListener(t, ev => ev.stopPropagation()); document.getElementById('tvConn').addEventListener(t, ev => ev.stopPropagation()); });
+  document.getElementById('tvConn').addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); actBox.hidden = false; setTimeout(() => document.getElementById('tvCode').focus(), 50); });
+  document.getElementById('tvActCancel').addEventListener('click', () => { actBox.hidden = true; document.getElementById('tvActErr').textContent = ''; });
+  document.getElementById('tvActGo').addEventListener('click', () => tvActivate());
+  document.getElementById('tvPin').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); tvActivate(); } });
   testInit().then(ok => { if (ok) { tvActPaint(); window.dispatchEvent(new Event('resize')); tvPull().then(ch => { if (ch) tvRender(); }); } });
   document.getElementById('tvFsBtn').addEventListener('click', ev => { ev.stopPropagation(); enterFs(); });
   host.addEventListener('dblclick', () => { TV_GO_DONE = true; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else enterFs(); });
