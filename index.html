@@ -904,6 +904,7 @@ html.tvmode body::before{display:none}
 .tv-hint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:10px 18px;border-radius:10px;font-size:16px;transition:opacity .6s}
 .genlist{width:100%;border-collapse:collapse;margin:10px 0}.genlist th,.genlist td{border-bottom:1px solid var(--line,#ccc);padding:6px 8px;text-align:left}.genlist td.gk{font:700 1.15em ui-monospace,monospace;letter-spacing:2px}
 .tv-conn{position:fixed;left:16px;bottom:16px;z-index:30;background:#b45309;color:#fff;border:0;border-radius:10px;padding:10px 16px;font:600 15px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.4)}.tv-act{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;background:#fff;color:#111;border-radius:14px;padding:22px;width:min(440px,92vw);display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:15px system-ui,sans-serif}.tv-act[hidden]{display:none}.tv-act b{font-size:18px}.tv-act-f{display:flex;gap:8px}.tv-act-f input{flex:1;min-width:0;font:16px system-ui;padding:9px;border:1px solid #999;border-radius:8px}.tv-act small{color:#b00020;min-height:1.2em}.tv-act-b{display:flex;gap:8px;justify-content:flex-end}.tv-act-b button{font:600 15px system-ui;padding:9px 16px;border-radius:8px;border:1px solid #999;background:#eee;cursor:pointer}.tv-act-b .pri{background:#1e3a8a;color:#fff;border-color:#1e3a8a}
+.jbtns{display:flex;gap:4px;align-items:center;margin-left:auto}.ebtn{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink-3);font-size:19px;line-height:1;cursor:pointer}.ebtn:hover{background:rgba(0,0,0,.06)}fieldset:disabled .jbtns{display:none}.jitem{grid-template-columns:56px minmax(0,1fr) auto}
 </style>
 </head>
 <body>
@@ -1649,7 +1650,7 @@ const novItems = e => ['novs', 'jefatura'].flatMap(src => Object.keys((e && e[sr
 const autoNovs = e => { const x = (e && e.extr) || {}; return x.rescatar === 'SI' ? [{id:'auto-extr', sev:'g', tag:'Extricación', txt:`Recuperar material de extricación${filled(x.rescatarLugar) ? ' · ' + x.rescatarLugar : ''}`, por:'Automático · desde Material de extricación'}] : []; };
 const sevPick = k => `<div class="sevpick" id="${k}Sev" role="group" aria-label="Color según gravedad"><span class="sl">Color:</span>${['g','y','r'].map(v => `<button type="button" data-act="pickSev" data-for="${k}" data-sev="${v}" aria-pressed="false"><i></i>${SEV_NAME[v]}</button>`).join('')}</div>`;
 function resetSev(k) { const box = $('#' + k + 'Sev'); if (box) { delete box.dataset.sev; box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false')); } const inp = $('#' + k + 'New'); if (inp) { inp.disabled = true; inp.placeholder = 'Primero elige el color'; } }
-const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por ? `<small class="jpor">${esc(j.por)}</small>` : ''}</span><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad">×</button></div>`;
+const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por || j.ed ? `<small class="jpor">${esc(j.por || '')}${j.ed ? `${j.por ? ' · ' : ''}editada ${esc(hmOf(j.ed.at))}${j.ed.por && j.ed.por !== j.por ? ' por ' + esc(j.ed.por) : ''}` : ''}</small>` : ''}</span><span class="jbtns"><button type="button" class="ebtn" data-act="editNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}" aria-label="Editar novedad" title="Editar">✎</button><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad" title="Quitar">×</button></span></div>`;
 function renderNov() {
   const e = cur(), box = $('#novList'); if (!box) return;
   const items = novItems(e).filter(j => !(vencDay(e) && j.txt === VENC_TXT));
@@ -2626,7 +2627,32 @@ const actions = {
       <div class="fld"><span class="lbl">Gravedad</span><div class="sevpick" id="ambSev">${['g', 'y', 'r'].map(k => `<button type="button" data-act="ambSevPick" data-sev="${k}" aria-pressed="false"><i></i>${SEV_NAME[k]}</button>`).join('')}</div></div>
       <label class="fld" for="ambTxt"><span class="lbl">Novedad</span><textarea id="ambTxt" rows="3" placeholder="Ej. Móvil 90 con falla de frenos, queda en taller hasta el jueves"></textarea></label>
       <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Cerrar</button><button type="button" class="btn primary" data-act="ambNovSave">Agregar novedad</button></div>
-      ${mine.length ? `<h3>Tus novedades en este turno</h3><div class="jlist">${mine.map(([id, j]) => `<div class="jitem sev-${esc(j.sev || 'g')}"><span class="jh">${hmOf(j.at)}</span><span class="jt">${esc(j.txt)}</span><button type="button" class="linkbtn" data-act="ambNovDel" data-id="${esc(id)}">Quitar</button></div>`).join('')}</div>` : ''}`);
+      ${mine.length ? `<h3>Tus novedades en este turno</h3><div class="jlist">${mine.map(([id, j]) => `<div class="jitem sev-${esc(j.sev || 'g')}"><span class="jh">${hmOf(j.at)}</span><span class="jt">${esc(j.txt)}</span><button type="button" class="linkbtn" data-act="editNov" data-src="novs" data-id="${esc(id)}">Editar</button><button type="button" class="linkbtn" data-act="ambNovDel" data-id="${esc(id)}">Quitar</button></div>`).join('')}</div>` : ''}`);
+  },
+  editNov(a) {
+    const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, d = view.mode === 'draft' ? store.draft : null;
+    const j = d && d[src] && d[src][id]; if (!j) return;
+    const amb = isAmb() && j.por === sesLabel();
+    if (isRO() && !amb) { toast('Solo el jefe de turno a cargo puede editar las novedades'); return; }
+    openSheet(`<h2>Editar novedad</h2>
+      <div class="fld"><span class="lbl">Color</span><div class="sevpick" id="edSev" data-sev="${esc(j.sev || '')}">${['g', 'y', 'r'].map(k => `<button type="button" data-act="edSevPick" data-sev="${k}" aria-pressed="${j.sev === k}"><i></i>${SEV_NAME[k]}</button>`).join('')}</div></div>
+      <label class="fld" for="edTxt"><span class="lbl">Novedad</span><textarea id="edTxt" rows="4"></textarea></label>
+      <div class="sheet-act"><button type="button" class="btn" data-act="${amb && isRO() ? 'ambNov' : 'closeSheet'}">Cancelar</button><button type="button" class="btn primary" data-act="editNovSave" data-src="${src}" data-id="${esc(id)}">Guardar cambios</button></div>`);
+    const t = $('#edTxt'); t.value = j.txt || ''; t.focus(); t.setSelectionRange(t.value.length, t.value.length);
+  },
+  edSevPick(a) { $$('#edSev button').forEach(b => b.setAttribute('aria-pressed', b === a ? 'true' : 'false')); $('#edSev').dataset.sev = a.dataset.sev; },
+  editNovSave(a) {
+    const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, d = store.draft;
+    const j = d[src] && d[src][id]; if (!j) { closeSheet(); return; }
+    const amb = isAmb() && j.por === sesLabel();
+    if (isRO() && !amb) return;
+    const sev = ($('#edSev') || {dataset:{}}).dataset.sev, txt = (($('#edTxt') || {}).value || '').trim();
+    if (!SEV_NAME[sev]) { toast('Elige el color: verde, amarillo o rojo'); return; }
+    if (!txt) { toast('La novedad no puede quedar vacía. Para borrarla usa la ×'); $('#edTxt').focus(); return; }
+    if (txt === j.txt && sev === j.sev) { closeSheet(); return; }
+    j.txt = txt; j.sev = sev; j.ed = {at:new Date().toISOString(), por:sesLabel()};
+    if (amb && isRO()) { persist(); refresh(); renderNov(); toast('Novedad editada'); actions.ambNov(); return; }
+    closeSheet(); renderNov(); changed(); toast('Novedad editada');
   },
   ambSevPick(a) { $$('#ambSev button').forEach(b => b.setAttribute('aria-pressed', b === a ? 'true' : 'false')); $('#ambSev').dataset.sev = a.dataset.sev; const t = $('#ambTxt'); if (t) t.focus(); },
   ambNovSave() {
