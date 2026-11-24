@@ -234,8 +234,9 @@ select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--
 [data-g="3"]{--gc:var(--g3);--gt:var(--g3t);--gs:var(--g3s)}
 [data-g="4"]{--gc:var(--g4);--gt:var(--g4t);--gs:var(--g4s)}
 [data-g="5"]{--gc:var(--g5);--gt:var(--g5t);--gs:var(--g5s)}
-.sec[data-g]{border-top:5px solid var(--gc);overflow:hidden}
-.sec[data-g] > .sec-h{background:var(--gs)}
+.sec[data-g]{border-top:5px solid var(--gc)}
+.sec[data-g] > .sec-h{background:var(--gs);border-radius:max(0px,calc(var(--r) - 5px)) max(0px,calc(var(--r) - 5px)) 0 0}
+.sec:has(.cbx.open){position:relative;z-index:40}
 .sec[data-g] > .sec-h h2{color:var(--gt)}
 .grp-h{display:flex;align-items:center;gap:12px;margin:18px 0 -2px;font:700 15px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--gt)}
 .grp-h:first-child{margin-top:0}
