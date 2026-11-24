@@ -905,6 +905,7 @@ html.tvmode body::before{display:none}
 .genlist{width:100%;border-collapse:collapse;margin:10px 0}.genlist th,.genlist td{border-bottom:1px solid var(--line,#ccc);padding:6px 8px;text-align:left}.genlist td.gk{font:700 1.15em ui-monospace,monospace;letter-spacing:2px}
 .tv-conn{position:fixed;left:16px;bottom:16px;z-index:30;background:#b45309;color:#fff;border:0;border-radius:10px;padding:10px 16px;font:600 15px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.4)}.tv-act{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;background:#fff;color:#111;border-radius:14px;padding:22px;width:min(440px,92vw);display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:15px system-ui,sans-serif}.tv-act[hidden]{display:none}.tv-act b{font-size:18px}.tv-act-f{display:flex;gap:8px}.tv-act-f input{flex:1;min-width:0;font:16px system-ui;padding:9px;border:1px solid #999;border-radius:8px}.tv-act small{color:#b00020;min-height:1.2em}.tv-act-b{display:flex;gap:8px;justify-content:flex-end}.tv-act-b button{font:600 15px system-ui;padding:9px 16px;border-radius:8px;border:1px solid #999;background:#eee;cursor:pointer}.tv-act-b .pri{background:#1e3a8a;color:#fff;border-color:#1e3a8a}
 .jbtns{display:flex;gap:4px;align-items:center;margin-left:auto}.ebtn{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink-3);font-size:19px;line-height:1;cursor:pointer}.ebtn:hover{background:rgba(0,0,0,.06)}fieldset:disabled .jbtns{display:none}.jitem{grid-template-columns:56px minmax(0,1fr) auto}
+.tgrid.t2{grid-template-columns:repeat(2,minmax(0,1fr))}.tgrid.t2 .tin input{font-size:28px}.thora{margin:0 0 8px;font-weight:700;color:var(--ink-2,#334)}
 </style>
 </head>
 <body>
@@ -1083,8 +1084,8 @@ function blankEntry() {
     oxigeno: {g:'', p:'', vacios:''},
     reserva: {}, reservaDet: {},
     extr: {encargado:'', guardar:null, guardarLugar:'', rescatar:null, rescatarLugar:'', reponer:null, reponerDet:''},
-    bodega: {encargado:'', temp:null, limpia:null, reponer:null, obs:''},
-    salaeq: {encargado:'', temp:null, cargando:null, limpia:null, obs:''},
+    bodega: {encargado:'', temp:null, hum:'', limpia:null, reponer:null, obs:''},
+    salaeq: {encargado:'', temp:null, hum:'', cargando:null, limpia:null, obs:''},
     equipos: Object.fromEntries(EQUIPOS.map(([k]) => [k, ''])),
     insumos: {mascara:null, mascaraN:'', marcapaso:null, mpCant:'', mpMarca:'', mpTipo:'', trocar:null, trocarTipo:null},
     controlados: CONTROLADOS.map(name => ({name, ent:'', rec:'', repo:'', corr:'', uso:''})),
@@ -1267,8 +1268,8 @@ function card(id, title, body, sub = '') {
 function mcell(path, label, mode = 'numeric', numType = 'int') {
   return `<label class="mcell" for="${fid(path)}"><span class="mlbl">${label}</span><input id="${fid(path)}" type="text" inputmode="${mode}" data-bind="${path}"${numType ? ` data-num="${numType}"` : ''} autocomplete="off" aria-label="${esc(label)}"></label>`;
 }
-function tbox(path, label) {
-  return `<label class="tbox" for="${fid(path)}" data-t="${path}"><span class="lbl">${label}</span><span class="tin"><input id="${fid(path)}" type="text" inputmode="decimal" data-num="dec" data-bind="${path}" autocomplete="off" placeholder="—"><em>°C</em></span><span class="tnote"></span></label>`;
+function tbox(path, label, unit = '°C') {
+  return `<label class="tbox" for="${fid(path)}" data-t="${path}"><span class="lbl">${label}</span><span class="tin"><input id="${fid(path)}" type="text" inputmode="decimal" data-num="dec" data-bind="${path}" autocomplete="off" placeholder="—"><em>${unit}</em></span><span class="tnote"></span></label>`;
 }
 
 /* ================== formulario ================== */
@@ -1433,11 +1434,11 @@ function renderForm(e) {
     card('s-bodega', 'Bodega diaria', `${staffField('bodega.encargado', 'Encargado (PM)', 'PM')}
       ${tempBlock('bodega')}
       <div class="ynlist">${yn('bodega.limpia', 'Sala limpia y ordenada')}${yn('bodega.reponer', 'Pendiente reponer', 'SI')}</div>
-      ${ta('bodega.obs', 'Observaciones', 2)}`, `Temperatura de la sala: rango ${rTxt(...tRange('bodega'))}. Se cambia en Ajustes.`) +
+      ${ta('bodega.obs', 'Observaciones', 2)}`, `Una toma por turno: 19:00 en turno largo, 07:00 en turno noche. Rango de temperatura ${rTxt(...tRange('bodega'))} (se cambia en Ajustes).`) +
     card('s-salaeq', 'Sala de equipos', `${staffField('salaeq.encargado', 'Encargado (PM)', 'PM')}
       ${tempBlock('salaeq')}
       <div class="ynlist">${yn('salaeq.cargando', 'Equipos cargando')}${yn('salaeq.limpia', 'Sala limpia y ordenada')}</div>
-      ${ta('salaeq.obs', 'Observaciones', 2)}`, `Temperatura de la sala: rango ${rTxt(...tRange('salaeq'))}. Se cambia en Ajustes.`) + `</div>`,
+      ${ta('salaeq.obs', 'Observaciones', 2)}`, `Una toma por turno: 19:00 en turno largo, 07:00 en turno noche. Rango de temperatura ${rTxt(...tRange('salaeq'))} (se cambia en Ajustes).`) + `</div>`,
     `<div class="grp-h" data-g="3"><b>3</b>Temperaturas y equipos</div>`,
     card('s-refri', 'Temperatura refrigerador', tempBlock('refri', true), `Cadena de frío: rango ${rTxt(...tRange('refri'))}. Se cambia en Ajustes.`),
     card('s-equipos', 'Equipos clínicos', `<div class="g-eq">${EQUIPOS.map(([k, n]) => `<div class="etile"><span>${n}</span>${stepper('equipos.' + k, n + ' operativos')}</div>`).join('')}</div>`, 'Cantidad operativa de cada equipo al momento de la entrega.'),
@@ -1513,12 +1514,12 @@ function sectionMissing(e) {
   if (x.reponer === 'SI') need('s-extricacion', filled(x.reponerDet), 'Qué material falta reponer');
   const b = e.bodega;
   need('s-bodega', filled(b.encargado), 'Encargado de bodega');
-  need('s-bodega', filled(b.tMo), 'T° momento de bodega'); need('s-bodega', filled(b.tMax), 'T° máxima de bodega'); need('s-bodega', filled(b.tMin), 'T° mínima de bodega');
+  need('s-bodega', filled(b.tMo), 'T° actual de bodega'); need('s-bodega', filled(b.hum), 'Humedad de bodega');
   need('s-bodega', filled(b.limpia), 'Bodega limpia y ordenada');
   need('s-bodega', filled(b.reponer), 'Bodega: pendiente reponer');
   const s = e.salaeq;
   need('s-salaeq', filled(s.encargado), 'Encargado de sala de equipos');
-  need('s-salaeq', filled(s.tMo), 'T° momento de sala de equipos'); need('s-salaeq', filled(s.tMax), 'T° máxima de sala de equipos'); need('s-salaeq', filled(s.tMin), 'T° mínima de sala de equipos');
+  need('s-salaeq', filled(s.tMo), 'T° actual de sala de equipos'); need('s-salaeq', filled(s.hum), 'Humedad de sala de equipos');
   need('s-salaeq', filled(s.cargando), 'Equipos cargando');
   need('s-salaeq', filled(s.limpia), 'Sala de equipos limpia y ordenada');
   EQUIPOS.forEach(([k, n]) => need('s-equipos', filled(e.equipos[k]), n));
@@ -1574,6 +1575,7 @@ function alertsOf(e, opts = {}) {
   ['bodega', 'salaeq'].forEach(k => {
     const c = TEMPS[k], [ta1, tb1] = tRange(k), v = tVals(e, k);
     if (v.mo != null && (v.mo < ta1 || v.mo > tb1)) add('crit', c.sec, `${c.name}: ${fmtT(v.mo)} °C ahora, fuera del rango ${rTxt(ta1, tb1)}`);
+    if (v.mo == null && e === store.draft && tomaVencida(e)) add('warn', c.sec, `${c.name}: falta la toma de las ${tomaHora(e)} (T° y humedad)`);
     if (v.mx != null && v.mx > tb1) add('warn', c.sec, `${c.name}: llegó a ${fmtT(v.mx)} °C (máxima sobre ${tb1} °C)`);
     if (v.mn != null && v.mn < ta1) add('warn', c.sec, `${c.name}: bajó a ${fmtT(v.mn)} °C (mínima bajo ${ta1} °C)`);
   });
@@ -1835,10 +1837,15 @@ function applyGenFilter() {
 /* ================== registro de temperatura (refrigerador, bodega, sala de equipos) ================== */
 const TEMPS = {
   refri:  {name:'Refrigerador', what:'el refrigerador', sec:'s-refri', base:'refri', mo:'momento', mx:'max', mn:'min', resp:e => e.refri.resp},
-  bodega: {name:'Bodega diaria', what:'la bodega', sec:'s-bodega', base:'bodega', mo:'tMo', mx:'tMax', mn:'tMin', resp:e => e.bodega.encargado},
-  salaeq: {name:'Sala de equipos', what:'la sala de equipos', sec:'s-salaeq', base:'salaeq', mo:'tMo', mx:'tMax', mn:'tMin', resp:e => e.salaeq.encargado}
+  bodega: {name:'Bodega diaria', what:'la bodega', sec:'s-bodega', base:'bodega', mo:'tMo', mx:'tMax', mn:'tMin', hum:'hum', simple:true, resp:e => e.bodega.encargado},
+  salaeq: {name:'Sala de equipos', what:'la sala de equipos', sec:'s-salaeq', base:'salaeq', mo:'tMo', mx:'tMax', mn:'tMin', hum:'hum', simple:true, resp:e => e.salaeq.encargado}
 };
 const T_DEFAULT = {bodega:[15, 25], salaeq:[15, 25]};
+/* bodega y sala de equipos: una toma por turno (T° actual y humedad): 19:00 en turno largo, 07:00 en turno noche */
+const tomaHora = e => e && e.turno === 'Largo' ? '19:00' : e && e.turno === 'Noche' ? '07:00' : '';
+const tomaTxt = e => tomaHora(e) ? `Toma a las ${tomaHora(e)} (turno ${e.turno.toLowerCase()})` : 'Toma: 19:00 en turno largo · 07:00 en turno noche';
+const tomaVencida = e => { const h = new Date().getHours(); return e && ((e.turno === 'Largo' && h >= 19 && h < 23) || (e.turno === 'Noche' && h >= 7 && h < 12)); };
+const humOf = (e, k) => { const c = TEMPS[k]; return c.hum ? num(((e && e[c.base]) || {})[c.hum]) : null; };
 function tRange(k) {
   const S = store.settings;
   if (k === 'refri') return [num(S.rMin) ?? 2, num(S.rMax) ?? 8];
@@ -1850,6 +1857,7 @@ const fmtN = n => (Math.round(n * 10) / 10).toLocaleString('es-CL');
 function tVals(e, k) { const c = TEMPS[k], o = (e && e[c.base]) || {}; return {mo:num(o[c.mo]), mx:num(o[c.mx]), mn:num(o[c.mn])}; }
 function tState(e, k) {
   const [a, b] = tRange(k), v = tVals(e, k);
+  if (TEMPS[k].simple) return v.mo == null ? 'none' : (v.mo < a || v.mo > b) ? 'crit' : 'ok';
   if (v.mo == null && v.mx == null && v.mn == null) return 'none';
   if (v.mo != null && (v.mo < a || v.mo > b)) return 'crit';
   if ((v.mx != null && v.mx > b) || (v.mn != null && v.mn < a)) return 'warn';
@@ -1857,11 +1865,14 @@ function tState(e, k) {
 }
 function tPdf(e, k) {
   const v = tVals(e, k), st = tState(e, k), o = e[TEMPS[k].base] || {};
+  if (TEMPS[k].simple && (v.mo != null || humOf(e, k) != null || v.mx == null)) { const hv = humOf(e, k); return `${tomaHora(e) ? 'Toma ' + tomaHora(e) + ': ' : ''}T° ${v.mo != null ? fmtT(v.mo) + ' °C' : 'sin registro'} · humedad ${hv != null ? fmtN(hv) + ' %' : 'sin registro'}${st === 'crit' ? ' (fuera de rango)' : st === 'ok' ? ' (en rango)' : ''}`; }
   if (st === 'none') return o.temp ? `Control T° de la sala: ${o.temp}` : 'T° de la sala: sin registro';
   return `T° de la sala: momento ${fmtT(v.mo)} °C · máx ${fmtT(v.mx)} · mín ${fmtT(v.mn)} (${st === 'crit' ? 'fuera de rango' : st === 'warn' ? 'excursión registrada' : 'en rango'})`;
 }
 function tempBlock(k, withResp) {
   const c = TEMPS[k], p = c.base;
+  if (c.simple) return `<p class="thora" id="tHora-${k}">${tomaTxt(store.draft)}</p><div class="tgrid t2">${tbox(`${p}.${c.mo}`, 'T° actual')}${tbox(`${p}.${c.hum}`, 'Humedad', '%')}</div>
+      <div class="tstatus" id="tStatus-${k}" role="status"></div>`;
   return `<div class="tgrid${withResp ? '' : ' t3'}">${tbox(`${p}.${c.mo}`, 'T° momento')}${tbox(`${p}.${c.mx}`, 'T° máxima')}${tbox(`${p}.${c.mn}`, 'T° mínima')}${withResp ? staffField('refri.resp', 'Responsable') : ''}</div>
       <div class="tstatus" id="tStatus-${k}" role="status"></div>`;
 }
@@ -1887,6 +1898,20 @@ function chartBox(k) {
 }
 function paintTemp(e, k) {
   const c = TEMPS[k], [a, b] = tRange(k), v = tVals(e, k), p = c.base;
+  if (c.simple) {
+    const hr = document.getElementById(`tHora-${k}`); if (hr) hr.textContent = tomaTxt(e);
+    const bx = document.querySelector(`[data-t="${p}.${c.mo}"]`);
+    if (bx) { bx.dataset.st = v.mo == null ? '' : (v.mo < a || v.mo > b) ? 'bad' : 'ok'; bx.querySelector('.tnote').textContent = v.mo == null ? '' : v.mo > b ? `Sobre ${fmtN(b)} °C` : v.mo < a ? `Bajo ${fmtN(a)} °C` : 'En rango'; }
+    const hb = document.querySelector(`[data-t="${p}.${c.hum}"]`), hv = humOf(e, k);
+    if (hb) { hb.dataset.st = ''; hb.querySelector('.tnote').textContent = hv == null ? '' : (hv < 0 || hv > 100) ? 'Revisa el valor (0 a 100 %)' : ''; }
+    const ts = document.getElementById(`tStatus-${k}`); if (!ts) return;
+    const st = tState(e, k), falta = view.mode === 'draft' && v.mo == null && tomaVencida(e);
+    if (st === 'none') { ts.className = 'tstatus' + (falta ? ' warn' : ''); ts.innerHTML = falta ? `<span class="ic" style="background:var(--warn);color:var(--on-warn)">!</span>Ya es hora de la toma de las ${tomaHora(e)}: anota la temperatura actual y la humedad.` : `<span class="ic" style="background:var(--surface);color:var(--ink-3)">·</span>Anota la temperatura actual y la humedad${tomaHora(e) ? ' a las ' + tomaHora(e) : ''}.`; }
+    else if (st === 'crit') { ts.className = 'tstatus crit'; ts.innerHTML = `<span class="ic" style="background:var(--crit);color:var(--on-status)">!</span>Fuera de rango (${fmtT(v.mo)} °C). Revisa ${c.what} y avisa a la jefatura.`; }
+    else { ts.className = 'tstatus ok'; ts.innerHTML = `<span class="ic" style="background:var(--good);color:var(--on-status)">✓</span>Dentro del rango ${rTxt(a, b)}${hv != null ? ' · humedad ' + fmtN(hv) + ' %' : ''}.`; }
+    const kr = document.getElementById(`keyRange-${k}`); if (kr) kr.textContent = `Rango ${rTxt(a, b)}`;
+    return;
+  }
   [[c.mo, v.mo, x => x < a || x > b, x => x > b ? `Sobre ${fmtN(b)} °C` : `Bajo ${fmtN(a)} °C`], [c.mx, v.mx, x => x > b, () => `Sobre ${fmtN(b)} °C`], [c.mn, v.mn, x => x < a, () => `Bajo ${fmtN(a)} °C`]].forEach(([f, val, bad, note]) => {
     const box = document.querySelector(`[data-t="${p}.${f}"]`); if (!box) return;
     box.dataset.st = val == null ? '' : bad(val) ? 'bad' : 'ok';
@@ -4099,7 +4124,7 @@ function tvRender() {
     const v = tVals(e, k), st = tState(e, k), [a, b] = tRange(k);
     const pill = st === 'none' ? '<span class="tv-pill soft">Sin lectura</span>' : st === 'crit' ? '<span class="tv-pill crit">Fuera de rango</span>' : st === 'warn' ? '<span class="tv-pill warn">Excursión</span>' : '<span class="tv-pill ok">En rango</span>';
     const nm = k === 'salaeq' ? 'Sala equipos' : k === 'bodega' ? 'Bodega' : 'Refrigerador';
-    return `<div class="tv-li"><div><b>${nm}</b><small>${rTxt(a, b)}${v.mx != null || v.mn != null ? `<br>máx ${fmtT(v.mx)} · mín ${fmtT(v.mn)}` : ''}</small></div><div class="tv-tr"><b>${v.mo != null ? fmtT(v.mo) + ' °C' : '—'}</b>${pill}</div></div>`;
+    return `<div class="tv-li"><div><b>${nm}</b><small>${rTxt(a, b)}${TEMPS[k].simple ? (humOf(e, k) != null ? `<br>humedad ${fmtN(humOf(e, k))} %` : '') : v.mx != null || v.mn != null ? `<br>máx ${fmtT(v.mx)} · mín ${fmtT(v.mn)}` : ''}</small></div><div class="tv-tr"><b>${v.mo != null ? fmtT(v.mo) + ' °C' : '—'}</b>${pill}</div></div>`;
   }).join('');
 
   let stockHtml = '', stockCount = '';
