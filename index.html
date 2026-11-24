@@ -2152,8 +2152,14 @@ function loadPdfLib() {
 const pdfTxt = v => String(v ?? '').replace(/[−–—]/g, '-').replace(/…/g, '...').replace(/[•]/g, '-').replace(/[^\x09\x0A\x20-\x7E\xA0-\xFF]/g, '');
 const pdfName = e => `Entrega turno ${String(e.numero ?? 0).padStart(6, '0')} - ${String(e.fecha || '').slice(0, 10)}${e.turno ? ' ' + e.turno : ''}.pdf`;
 
+/* el PDF se ajusta a una hoja (2 páginas, por ambos lados): si no cabe, se achica la letra y los espacios */
 async function buildPdf(e) {
   try { await loadPdfLib(); } catch (x) { throw {code:'pdf'}; }
+  let r = null;
+  for (const k of [1, 0.9, 0.82, 0.75, 0.68, 0.62, 0.56]) { r = buildPdfK(e, k); if (r.pages <= 2) break; }
+  return r.blob;
+}
+function buildPdfK(e, k) {
   const {jsPDF} = window.jspdf, doc = new jsPDF({unit:'mm', format:'a4'});
   const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 14, S = store.settings;
   const green = [38, 47, 124], ink = [21, 26, 51], grey = [102, 110, 136];
@@ -2166,13 +2172,13 @@ async function buildPdf(e) {
   doc.setDrawColor(...green); doc.setLineWidth(0.6); doc.line(M, y + 14, W - M, y + 14);
   doc.setDrawColor(237, 233, 20); doc.setLineWidth(1.2); doc.line(M, y + 15.1, W - M, y + 15.1);
   y += 19;
-  const base = {theme:'grid', margin:{left:M, right:M}, styles:{font:'helvetica', fontSize:8.5, cellPadding:1.6, textColor:ink, lineColor:[208, 214, 230], lineWidth:0.2, overflow:'linebreak'}, headStyles:{fillColor:[228, 232, 246], textColor:ink, fontStyle:'bold'}};
+  const base = {theme:'grid', margin:{left:M, right:M, top:10, bottom:13}, styles:{font:'helvetica', fontSize:8.5 * k, cellPadding:1.6 * k, textColor:ink, lineColor:[208, 214, 230], lineWidth:0.2, overflow:'linebreak'}, headStyles:{fillColor:[228, 232, 246], textColor:ink, fontStyle:'bold'}};
   const cl = rows => rows.map(r => r.map(c => pdfTxt(c === '' || c == null ? '-' : c)));
   const sec = (title, opts) => {
-    if (y > H - 40) { doc.addPage(); y = 16; }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...green); doc.text(pdfTxt(title).toUpperCase(), M, y + 4);
-    doc.autoTable(Object.assign({}, base, {startY:y + 6}, opts));
-    y = doc.lastAutoTable.finalY + 5;
+    if (y > H - 30) { doc.addPage(); y = 12; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10 * Math.max(k, 0.8)); doc.setTextColor(...green); doc.text(pdfTxt(title).toUpperCase(), M, y + 4 * k);
+    doc.autoTable(Object.assign({}, base, {startY:y + 5.5 * k}, opts));
+    y = doc.lastAutoTable.finalY + 4.5 * k;
   };
   const yn2 = v => v || '-', bold = {fontStyle:'bold'};
   sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) + (e.cierre ? ' · cerrada por ' + e.cierre.por + ' con su clave' : '') : '—', 'Abastecimiento', e.abast || '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
@@ -2211,7 +2217,7 @@ async function buildPdf(e) {
   sec('Entrega y recepción', {body:cl([['Entrega conforme', e.entrega.nombre, 'Recibe conforme', e.recibe.nombre]]), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
   const n = doc.getNumberOfPages(), gen = `Generado el ${fmtDate(toLocalInput(new Date()))}${e.savedBy ? ' · Guardada por ' + e.savedBy : ''}${e._draft ? ' · Entrega en curso, aún no guardada' : e.savedAt ? ' · Entrega guardada el ' + fmtDate(toLocalInput(new Date(e.savedAt))) : ''}`;
   for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...grey); doc.text(pdfTxt(gen), M, H - 8); doc.text(`Página ${i} de ${n}`, W - M, H - 8, {align:'right'}); }
-  return doc.output('blob');
+  return {blob:doc.output('blob'), pages:doc.getNumberOfPages()};
 }
 
 /* --- carpeta local (Google Drive u OneDrive del computador) --- */
