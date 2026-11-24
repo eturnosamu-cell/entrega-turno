@@ -902,6 +902,7 @@ html.tvmode body::before{display:none}
 .tv-fsbtn{position:fixed;right:18px;top:18px;z-index:6;font:700 16px var(--f-display);background:#ede914;color:#1f2766;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;transition:opacity .4s}
 .tv-fsbtn.hide{opacity:0;pointer-events:none}
 .tv-hint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:10px 18px;border-radius:10px;font-size:16px;transition:opacity .6s}
+.genlist{width:100%;border-collapse:collapse;margin:10px 0}.genlist th,.genlist td{border-bottom:1px solid var(--line,#ccc);padding:6px 8px;text-align:left}.genlist td.gk{font:700 1.15em ui-monospace,monospace;letter-spacing:2px}
 </style>
 </head>
 <body>
@@ -2633,6 +2634,43 @@ const actions = {
     openSheet(`<h2>Claves guardadas</h2><p>${ok.length ? `Quedaron guardadas en Google ${ok.length} clave${ok.length > 1 ? 's' : ''}: ${ok.map(esc).join(', ')}.` : 'No se guardó ninguna clave.'}</p>${bad.length ? `<div class="sblock warn"><h3>Revisar</h3><ul>${bad.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
       <div class="sheet-act"><button type="button" class="btn primary" data-act="accesos">Volver a Claves de acceso</button><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>`);
   },
+  async accGen(a) {
+    if (!armed(a, 'Toca otra vez para confirmar')) return;
+    const me = String(SES && SES.code || '').toUpperCase();
+    const reas = [...store.settings.personal].filter(p => rolOf(p.clave) === 'R').sort(claveSort).map(p => p.clave.toUpperCase());
+    const codes = [...new Set([...reas, 'AMB'])];
+    if (codes.includes(me)) { codes.splice(codes.indexOf(me), 1); codes.push(me); } /* la propia al final */
+    const weak = k => /^(\d)\1{3}$/.test(k) || '0123456789'.includes(k) || '9876543210'.includes(k) || /^(\d\d)\1$/.test(k);
+    const used = new Set(), keys = {};
+    const rnd = () => { const b = new Uint32Array(1); crypto.getRandomValues(b); return String(1000 + b[0] % 9000); };
+    codes.forEach(c => { let k; do { k = rnd(); } while (used.has(k) || weak(k)); used.add(k); keys[c] = k; });
+    a.disabled = true; GEN_HOLD = true; const ok = [], bad = [];
+    for (let i = 0; i < codes.length; i++) {
+      const c = codes[i]; a.textContent = `Guardando ${i + 1} de ${codes.length}…`;
+      try { await syncPost({action:'accSet', code:c, ph:pinHash(keys[c])}); ok.push(c); }
+      catch (e) { bad.push(c); }
+    }
+    GEN_LIST = ok.map(c => [c, c === 'AMB' ? 'Encargado de móviles' : titleCase(((store.settings.personal || []).find(p => String(p.clave).toUpperCase() === c) || {}).nombre || ''), keys[c]]).sort((x, y) => x[0] === 'AMB' ? 1 : y[0] === 'AMB' ? -1 : claveSort({clave:x[0]}, {clave:y[0]}));
+    const fecha = new Date().toLocaleDateString('es-CL');
+    openSheet(`<h2>Claves nuevas (${fecha})</h2>
+      <p>${ok.length ? `Quedaron guardadas en Google ${ok.length} claves nuevas. Las anteriores ya no sirven.` : 'No se guardó ninguna clave.'} <b>Guarda o imprime esta lista ahora:</b> no se vuelve a mostrar, porque en Google solo queda la clave cifrada.</p>
+      ${bad.length ? `<div class="sblock warn"><h3>No se pudieron guardar (siguen con su clave anterior)</h3><p>${bad.map(esc).join(', ')}</p></div>` : ''}
+      <table class="genlist"><thead><tr><th>Código</th><th>Nombre</th><th>Clave</th></tr></thead><tbody>${GEN_LIST.map(r => `<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td class="gk">${esc(r[2])}</td></tr>`).join('')}</tbody></table>
+      ${ok.includes(me) ? `<p class="muted">Tu clave (${esc(me)}) también cambió. Al cerrar esta lista tendrás que entrar de nuevo con la clave nueva.</p>` : ''}
+      <div class="sheet-act"><button type="button" class="btn primary" data-act="genPrint">Imprimir o guardar PDF</button><button type="button" class="btn" data-act="genCopy">Copiar lista</button><button type="button" class="btn" data-act="genDone">Listo, ya la guardé</button></div>`, 'wide');
+  },
+  genPrint() {
+    const fecha = new Date().toLocaleDateString('es-CL');
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Claves SAMU ${fecha}</title><style>body{font:14px system-ui,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}p{margin:0 0 14px;color:#444}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:6px 10px;text-align:left}th{background:#eee}td.k{font:bold 16px ui-monospace,monospace;letter-spacing:2px}</style></head><body><h1>Claves de acceso · Entrega de Turno SAMU</h1><p>Generadas el ${fecha}. Entregar a cada persona solo su clave. Documento confidencial.</p><table><tr><th>Código</th><th>Nombre</th><th>Clave</th></tr>${GEN_LIST.map(r => `<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td class="k">${esc(r[2])}</td></tr>`).join('')}</table><script>setTimeout(()=>print(),300)<\/script></body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
+    else { const b = new Blob([html], {type:'text/html'}), u = URL.createObjectURL(b), l = document.createElement('a'); l.href = u; l.download = `Claves SAMU ${fecha.replace(/\//g, '-')}.html`; document.body.appendChild(l); l.click(); l.remove(); }
+  },
+  async genCopy() {
+    const t = GEN_LIST.map(r => `${r[0]} ${r[2]}  ${r[1]}`).join('\n');
+    try { await navigator.clipboard.writeText(t); toast('Lista copiada'); } catch (e) { toast('No se pudo copiar: usa Imprimir o saca una foto'); }
+  },
+  genDone() { GEN_LIST = []; GEN_HOLD = false; closeSheet(); if (GEN_LOST) { GEN_LOST = false; authLost(); } else accesosSheet(); },
   async accSet(a) {
     const code = a.dataset.code, inp = document.querySelector(`[data-accpin="${CSS.escape(code)}"]`), v = (inp.value || '').trim();
     if (!/^\d{4,8}$/.test(v)) { toast('La clave debe tener de 4 a 8 números'); inp.focus(); return; }
@@ -3583,7 +3621,8 @@ document.addEventListener('input', ev => {
   if (w) w.textContent = BLOQ.includes(code) ? `${JEF_NOMBRE[code]} · desactivado por ahora` : JEF_NOMBRE[code] || (store.settings.personal.some(x => x.clave.toUpperCase() === code) ? accLabel(code) : '');
 });
 /* la sesión venció o la clave cambió en otro equipo */
-function authLost() { if (document.documentElement.classList.contains('tvmode')) return; if (SES && SES.prueba) { try { localStorage.removeItem(TEST_TOK); } catch (e) {} } if (SES) logout('Tu sesión venció o tu clave cambió. Vuelve a entrar.'); }
+let GEN_HOLD = false, GEN_LOST = false, GEN_LIST = [];
+function authLost() { if (document.documentElement.classList.contains('tvmode')) return; if (GEN_HOLD) { GEN_LOST = true; return; } if (SES && SES.prueba) { try { localStorage.removeItem(TEST_TOK); } catch (e) {} } if (SES) logout('Tu sesión venció o tu clave cambió. Vuelve a entrar.'); }
 
 async function accesosSheet() {
   openSheet('<h2>Claves de acceso</h2><p class="muted">Cargando desde Google…</p>', 'wide');
@@ -3602,6 +3641,9 @@ async function accesosSheet() {
     <p class="muted">MJ, SA y T1 a T4 están desactivados por ahora: no pueden entrar, pero sus claves siguen guardadas en Google por si se vuelven a activar.</p>
     <h3>Encargado de móviles (estado de móviles y novedades de la flota, en cualquier turno)</h3><div class="acclist">${row('AMB', '', true)}</div>
     <h3>Reanimadores (el primero que entra en el turno queda a cargo de la entrega)</h3><div class="acclist">${reas.map(p => row(p.clave.toUpperCase(), titleCase(p.nombre) + (p.sup ? ' (suplente)' : ''), false)).join('')}</div>
+    <h3>Generar claves nuevas para todos</h3>
+    <p class="muted">Crea al azar una clave nueva de 4 números para cada reanimador y para AMB, la guarda en Google y te muestra la lista para imprimir. Las claves anteriores dejan de servir. Tu propia clave también cambia.</p>
+    <div class="sheet-act"><button type="button" class="btn primary" data-act="accGen">Generar claves nuevas para todos</button></div>
     <h3>Cargar varias claves de una vez</h3>
     <p class="muted">Pega la lista con una persona por línea: el código y la clave, por ejemplo <b>R1 5216</b>. Sirve también la tabla copiada tal cual. Se guardan todas en Google con un solo botón.</p>
     <textarea id="accBulk" rows="7" style="width:100%;font:inherit;padding:8px;border-radius:8px" spellcheck="false" autocomplete="off" aria-label="Lista de códigos y claves"></textarea>
