@@ -196,7 +196,8 @@ fieldset#fs{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:
 .grid{display:grid;gap:14px 16px}
 .g2{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-.g-turno{grid-template-columns:auto minmax(200px,1fr) minmax(180px,1fr) minmax(180px,1fr)}
+.g-turno{grid-template-columns:auto minmax(190px,1fr) minmax(170px,1fr) minmax(170px,1fr) minmax(170px,1fr)}
+@media (max-width:1250px){.g-turno{grid-template-columns:auto minmax(190px,1fr) minmax(170px,1fr)}}
 @media (max-width:900px){.g-turno{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.g-turno{grid-template-columns:minmax(0,1fr)}}
 .fld{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -350,6 +351,9 @@ fieldset:disabled .xbtn{visibility:hidden}
 .resrow select.rsel[data-v="En taller"],.resrow select.rsel[data-v="Mantención"]{border-color:var(--warn);background:var(--warn-soft);color:var(--warn-ink)}
 .resrow select.rsel[data-v="Préstamo"]{border-color:var(--accent);background:var(--accent-soft)}
 .resrow b{font:700 16px/1.2 var(--f-display);white-space:nowrap}
+.rescell{display:flex;flex-direction:column;gap:6px;min-width:0}
+.rescell .resdet{min-height:38px;font-size:14.5px;padding:6px 10px}
+.movlist .rescell{margin-bottom:8px}
 .resrow input.pat{text-transform:uppercase;font-weight:700;letter-spacing:.06em;text-align:center}
 @media (max-width:560px){.resrow.rhead{display:none}}
 
@@ -824,7 +828,18 @@ html.tvmode body::before{display:none}
 .tv-rv.sp.off i{background:#aab3dd}
 .tv-rad{display:flex;justify-content:space-between;align-items:baseline;margin-top:auto;padding-top:14px;border-top:1px solid #343e8c;font-size:21px;color:#c7cdee}
 .tv-rad b{font:700 34px/1 var(--f-display);color:#ede914;letter-spacing:.02em}
-.tv-bot{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:24px;margin-top:26px;min-height:0}
+.tv-bot{display:grid;grid-template-columns:minmax(0,2.75fr) minmax(0,1fr) minmax(0,.82fr);gap:20px;margin-top:22px;min-height:0}
+.tv-pan[data-tg="res"],.tv-pan[data-tg="o2"]{padding:16px 20px}
+.tv-pan[data-tg="res"] .tv-li,.tv-pan[data-tg="o2"] .tv-li{padding:8px 0}
+.tv-pan[data-tg="res"] .tv-li b,.tv-pan[data-tg="o2"] .tv-li b{font-size:27px}
+.tv-pan[data-tg="o2"] .tv-tr b{font-size:32px}
+.tv-pan[data-tg="o2"] .tv-tr{gap:5px}
+.tv-pan[data-tg="res"] .tv-pill,.tv-pan[data-tg="o2"] .tv-pill{font-size:15px;padding:6px 10px}
+.tv-pan[data-tg="res"] .tv-li small,.tv-pan[data-tg="o2"] .tv-li small{font-size:17px;margin-top:2px;white-space:normal}
+.tv-res > div{min-width:0}
+.tv-info{display:flex;gap:26px;align-items:baseline}
+.tv-info i{font-style:normal;color:#c7cdee}.tv-info b{color:#fff}
+.tv-fuel{background:#ede914;color:#1a2063!important;padding:4px 14px;border-radius:999px;font-weight:700}.tv-fuel b{color:#1a2063!important}
 .tv-pan{background:#1a2063;border:2px solid #2c357f;border-radius:14px;padding:18px 28px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .tv-pan[data-tg]{border-top:6px solid var(--tg)}.tv-pan[data-tg] .tv-sec{color:var(--tg)}
 .tv-pan[data-tg="nov"]{--tg:#f2c230}.tv-pan[data-tg="res"]{--tg:#6f97ff}.tv-pan[data-tg="o2"]{--tg:#4cc884}
@@ -1055,12 +1070,12 @@ function set(o, p, v) { const ks = p.split('.'); let a = o; for (let i = 0; i < 
 function blankEntry() {
   return {
     id: uid(), numero: null, ejemplo: false, savedAt: null,
-    turno: null, fecha: toLocalInput(new Date()), jefe: '', subrogante: '',
+    turno: null, fecha: toLocalInput(new Date()), jefe: '', subrogante: '', abast: '',
     moviles: [0,1,2,3].map(() => ({id:'', r:'', pm:'', c:'', radios:['', '', '']})),
     est: {encargado:'', siniestros:null, incTipo:'', incDet:'', faf:null, fafNombre:'', fafEnviado:null},
     radios: {cargadas:null, base:'', llamado:'', registro:[0,1,2].map(() => ({func:'', num:'', ent:false})), propias:''},
     oxigeno: {g:'', p:'', vacios:''},
-    reserva: {},
+    reserva: {}, reservaDet: {},
     extr: {encargado:'', guardar:null, guardarLugar:'', rescatar:null, rescatarLugar:'', reponer:null, reponerDet:''},
     bodega: {encargado:'', temp:null, limpia:null, reponer:null, obs:''},
     salaeq: {encargado:'', temp:null, cargando:null, limpia:null, obs:''},
@@ -1160,7 +1175,7 @@ const hmOf = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${pad(d.g
 const opEnc = op => op && op.p && op.p[0] === 'live' && op.p[1] === 'draft' && op.p[2] === 'enc';
 const canEdit = () => !!(SES && SES.token && (SES.rol === 'J' || SES.admin || isEnc()));
 const canMov = () => canEdit() || !!(SES && SES.token && SES.rol === 'A');
-const opMov = op => op && op.p && op.p[0] === 'live' && ((op.p[1] === 'draft' && op.p[2] === 'reserva') || (op.p[1] === 'settings' && op.p[2] === 'flota'));
+const opMov = op => op && op.p && op.p[0] === 'live' && ((op.p[1] === 'draft' && (op.p[2] === 'reserva' || op.p[2] === 'reservaDet')) || (op.p[1] === 'settings' && op.p[2] === 'flota'));
 const isRO = () => view.mode !== 'draft' || !canEdit();
 function permChanged() { try { if (view.mode === 'draft') renderAll(); } catch (e) {} const m = document.getElementById('topMov'); if (m) m.hidden = !(SES && SES.rol === 'A'); }
 const sortHistory = () => store.history.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
@@ -1309,6 +1324,8 @@ function cascoRows(e) {
 }
 let resSig = null;
 const RES_EST = ['Disponible', 'En taller', 'Préstamo', 'Mantención'];
+const RES_DET = {'En taller':'¿Por qué está en taller?', 'Mantención':'¿Qué mantención?', 'Préstamo':'¿Dónde está prestado?'};
+const resDetOf = (e, num) => String((e && e.reservaDet && e.reservaDet[num]) || '').trim();
 function resFlota(e) { const used = new Set(e.moviles.map(m => m.id).filter(filled)); return (store.settings.flota || []).filter(f => filled(f.num) && !used.has(flotaLabel(f))); }
 function renderReserva() {
   const box = $('#resBox'); if (!box) return;
@@ -1316,11 +1333,15 @@ function renderReserva() {
   const F = resFlota(e), sig = F.map(f => f.num).join(',');
   if (sig !== resSig) {
     resSig = sig;
-    box.innerHTML = F.length ? `<div class="resgrid">` + F.map(f => `<div class="resrow"><b>${esc(flotaLabel(f))}</b><select class="rsel" id="${fid('reserva.' + f.num)}" data-bind="reserva.${f.num}" aria-label="Estado del móvil ${esc(f.num)}"><option value="">Elegir estado…</option>${RES_EST.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>`).join('') + '</div>'
+    box.innerHTML = F.length ? `<div class="resgrid">` + F.map(f => `<div class="rescell"><div class="resrow"><b>${esc(flotaLabel(f))}</b><select class="rsel" id="${fid('reserva.' + f.num)}" data-bind="reserva.${f.num}" aria-label="Estado del móvil ${esc(f.num)}"><option value="">Elegir estado…</option>${RES_EST.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div><input type="text" class="resdet" id="${fid('reservaDet.' + f.num)}" data-bind="reservaDet.${f.num}" data-resdet="${esc(f.num)}" autocomplete="off" aria-label="Detalle del móvil ${esc(f.num)}" hidden></div>`).join('') + '</div>'
       : '<p class="muted">Todos los móviles de la flota están en servicio. Los móviles se agregan en Ajustes, Móviles.</p>';
     fillInputs(box);
   }
-  $$('select.rsel', box).forEach(el => { el.dataset.v = el.value; });
+  $$('select.rsel', box).forEach(el => {
+    el.dataset.v = el.value;
+    const det = el.closest('.rescell') && el.closest('.rescell').querySelector('.resdet');
+    if (det) { const ph = RES_DET[el.value]; det.hidden = !ph && !det.value; det.placeholder = ph || 'Detalle'; }
+  });
 }
 function rerenderCascos() { const box = $('#cascoRows'); if (!box) return; box.innerHTML = cascoRows(cur()); fillInputs(box); refresh(); }
 function radioRows(e) {
@@ -1356,6 +1377,7 @@ function renderForm(e) {
         ${inp('fecha', 'Fecha y hora', {type:'datetime-local'})}
         ${staffField('jefe', 'Jefe de turno')}
         ${staffField('subrogante', 'Subrogante')}
+        ${staffField('abast', 'Turno de abastecimiento')}
       </div>`),
     card('s-moviles', 'Móviles y tripulación', `<div class="g-mov">${e.moviles.map((m, i) => movilCard(i, e)).join('')}</div>
       <h3 class="subh">Móviles de reposición <span>disponibles en caso de falla de un móvil en servicio</span></h3>
@@ -2138,7 +2160,8 @@ async function buildPdf(e) {
     ['Sala de equipos', sq.encargado, `${tPdf(e, 'salaeq')}\nEquipos cargando: ${yn2(sq.cargando)} · Limpia y ordenada: ${yn2(sq.limpia)}${filled(sq.obs) ? '\nObservaciones: ' + sq.obs : ''}`]
   ]), columnStyles:{0:Object.assign({cellWidth:36}, bold), 1:{cellWidth:50}}});
   const ox = e.oxigeno || {}, resv = (store.settings.flota || []).filter(f => e.reserva && e.reserva[f.num]);
-  sec('Oxígeno y móviles de reposición', {body:cl([['Cilindros 1 m³ llenos', ox.g, 'Cilindros 0,5 m³ llenos', ox.p], ['Vacíos por recargar', ox.vacios, 'Móviles de reposición', resv.length ? resv.map(f => `${flotaLabel(f)}${f.patente ? ' (' + f.patente + ')' : ''}: ${e.reserva[f.num]}`).join('\n') : 'Sin registro']]), columnStyles:{0:Object.assign({cellWidth:40}, bold), 2:Object.assign({cellWidth:40}, bold)}});
+  const resTxt = f => e.reserva[f.num] + (resDetOf(e, f.num) ? ' (' + resDetOf(e, f.num) + ')' : '');
+  sec('Oxígeno y móviles de reposición', {body:cl([['Cilindros 1 m³ llenos', ox.g, 'Cilindros 0,5 m³ llenos', ox.p], ['Vacíos por recargar', ox.vacios, 'Móviles de reposición', resv.length ? resv.map(f => `${flotaLabel(f)}${f.patente ? ' (' + f.patente + ')' : ''}: ${resTxt(f)}`).join('\n') : 'Sin registro']]), columnStyles:{0:Object.assign({cellWidth:40}, bold), 2:Object.assign({cellWidth:40}, bold)}});
   const eq = EQUIPOS.map(([k, n]) => [n, e.equipos[k]]), eqRows = [];
   for (let i = 0; i < eq.length; i += 2) eqRows.push([eq[i][0], eq[i][1], eq[i+1] ? eq[i+1][0] : ' ', eq[i+1] ? eq[i+1][1] : ' ']);
   sec('Equipos clínicos operativos', {body:cl(eqRows), columnStyles:{1:{cellWidth:16, halign:'center', fontStyle:'bold'}, 3:{cellWidth:16, halign:'center', fontStyle:'bold'}}});
@@ -2540,7 +2563,7 @@ const actions = {
     const d = store.draft; if (!d.reserva) d.reserva = {};
     const fl = (store.settings.flota || []).filter(f => filled(f.num));
     openSheet(`<h2>Estado de los móviles</h2><p class="muted">Lo que marques aquí se ve al tiro en la entrega y en la pantalla TV.</p>
-      <div class="movlist">${fl.map(f => `<div class="resrow"><b>${esc(flotaLabel(f))}</b><select class="rsel" data-movnum="${esc(f.num)}" data-v="${esc(d.reserva[f.num] || '')}"><option value="">Sin registro</option>${RES_EST.map(x => `<option${d.reserva[f.num] === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div>`).join('')}</div>
+      <div class="movlist">${fl.map(f => `<div class="rescell"><div class="resrow"><b>${esc(flotaLabel(f))}</b><select class="rsel" data-movnum="${esc(f.num)}" data-v="${esc(d.reserva[f.num] || '')}"><option value="">Sin registro</option>${RES_EST.map(x => `<option${d.reserva[f.num] === x ? ' selected' : ''}>${x}</option>`).join('')}</select></div><input type="text" class="resdet" data-movdet="${esc(f.num)}" value="${esc(resDetOf(d, f.num))}" placeholder="${esc(RES_DET[d.reserva[f.num]] || 'Detalle')}" autocomplete="off" aria-label="Detalle del móvil ${esc(f.num)}"${RES_DET[d.reserva[f.num]] || resDetOf(d, f.num) ? '' : ' hidden'}></div>`).join('')}</div>
       <div class="sheet-act"><button type="button" class="btn primary" data-act="closeSheet">Listo</button></div>`);
   },
   logout() { if (SES && SES.code === 'PRUEBA') { SES = null; try { localStorage.removeItem(SES_KEY); } catch (e) {} paintUser(); showLogin(); return; } logout(); },
@@ -2870,6 +2893,7 @@ const actions = {
         <label class="fld" for="setNum"><span class="lbl">Nº de la próxima entrega</span><input type="text" inputmode="numeric" id="setNum" value="${S.nextNum}"></label>
         <label class="fld" for="setRad"><span class="lbl">Radios disponibles (1 a …)</span><input type="text" inputmode="numeric" id="setRad" value="${S.nRadios || 20}"></label>
         <label class="fld" for="setCrit"><span class="lbl">Alerta roja de stock (% que queda)</span><input type="text" inputmode="numeric" id="setCrit" value="${critPct()}"></label>
+        <label class="fld" for="setBencina"><span class="lbl">Bencinera para cargar los móviles</span><select id="setBencina">${['', 'Aramco', 'Copec'].map(b => `<option value="${b}"${(store.settings.bencina || '') === b ? ' selected' : ''}>${b || 'Sin definir'}</option>`).join('')}</select></label>
         <label class="fld" for="setMailJef"><span class="lbl">Correo de jefatura (avisos FAF)</span><input type="email" id="setMailJef" value="${esc(mailJef())}" autocomplete="off"></label>
       </div>
       <p class="muted">Usa el Nº para seguir la numeración del talonario en papel.</p>
@@ -2917,7 +2941,7 @@ const actions = {
     if (!(cp >= 0 && cp <= 90)) { toast('La alerta roja debe estar entre 0 y 90 %'); return; }
     const mj = (($('#setMailJef') || {}).value || '').trim();
     if (mj && !/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(mj)) { toast('Revisa el correo de jefatura'); return; }
-    Object.assign(store.settings, {rMin:mn, rMax:mx, nextNum:n, nRadios:nr, stockCrit:cp, mailJef:mj || MAIL_JEF_DEFAULT}); persist(); closeSheet(); renderAll(); toast('Ajustes guardados');
+    Object.assign(store.settings, {rMin:mn, rMax:mx, nextNum:n, nRadios:nr, stockCrit:cp, mailJef:mj || MAIL_JEF_DEFAULT, bencina:(($('#setBencina') || {}).value || '')}); persist(); closeSheet(); renderAll(); toast('Ajustes guardados');
   },
   async sendLocalFile(a) {
     const to = (($('#lfMail') || {}).value || '').trim();
@@ -3528,7 +3552,7 @@ async function accesosSheet() {
    Cada computador manda solo lo que cambió (campo por campo) y recibe lo que cambiaron los demás.
    Si dos personas escriben el mismo campo a la vez, queda lo último que llegó. */
 const SYNC_KEY = 'samu-entrega-turno-sync';
-const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin','mailJef'];
+const SHARED_SETTINGS = ['nextNum','flota','personal','rMin','rMax','tRanges','stockCrit','nRadios','pin','mailJef','bencina'];
 const SY = {started:false, rev:null, base:null, busy:false, again:false, soonT:null, tick:null, n:0, last:null, err:'', noScript:false, act:0, adopting:false};
 const clone = o => o === undefined ? undefined : JSON.parse(JSON.stringify(o));
 const stab = o => JSON.stringify(o, (k, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((r, k2) => (r[k2] = v[k2], r), {}) : v);
@@ -3840,14 +3864,14 @@ function tvRender() {
   const RES_PILL = {'Disponible':'ok', 'Préstamo':'soft', 'Mantención':'warn', 'En taller':'crit'};
   const resv = (store.settings.flota || []).filter(f => filled(f.num) && e.reserva && RES_EST.includes(e.reserva[f.num]) && !e.moviles.some(m => m.id === flotaLabel(f)))
     .sort((a, b) => RES_EST.indexOf(e.reserva[a.num]) - RES_EST.indexOf(e.reserva[b.num]));
-  const resHtml = resv.length ? resv.slice(0, 4).map(f => `<div class="tv-li"><b>Móvil ${esc(f.num)}</b><span class="tv-pill ${RES_PILL[e.reserva[f.num]] || 'soft'}">${esc(e.reserva[f.num])}</span></div>`).join('')
+  const resHtml = resv.length ? resv.slice(0, 5).map(f => `<div class="tv-li tv-res"><div><b>Móvil ${esc(f.num)}</b>${resDetOf(e, f.num) ? `<small>${esc(resDetOf(e, f.num))}</small>` : ''}</div><span class="tv-pill ${RES_PILL[e.reserva[f.num]] || 'soft'}">${esc(e.reserva[f.num])}</span></div>`).join('')
     : '<p class="tv-none">Sin estado registrado para los móviles de reposición.</p>';
   const ox = e.oxigeno || {};
   const o2Html = [['g', '1 m³'], ['p', '0,5 m³']].map(([k, n]) => {
     const v = num(ox[k]);
     const pill = v == null ? '<span class="tv-pill soft">Sin conteo</span>' : v === 0 ? '<span class="tv-pill crit">Sin stock</span>' : v < O2_MIN ? '<span class="tv-pill warn">Pedir recarga</span>' : '<span class="tv-pill ok">En stock</span>';
-    return `<div class="tv-li"><div><b>${n}</b><small>Cilindros llenos · mínimo ${O2_MIN}</small></div><div class="tv-tr"><b>${v == null ? '—' : v}</b>${pill}</div></div>`;
-  }).join('') + (filled(ox.vacios) ? `<div class="tv-li"><div><b>Vacíos por recargar</b></div><div class="tv-tr"><b>${esc(ox.vacios)}</b></div></div>` : '');
+    return `<div class="tv-li"><div><b>${n}</b><small>llenos · mín. ${O2_MIN}</small></div><div class="tv-tr"><b>${v == null ? '—' : v}</b>${pill}</div></div>`;
+  }).join('') + (filled(ox.vacios) ? `<div class="tv-li"><div><b>Vacíos</b><small>por recargar</small></div><div class="tv-tr"><b>${esc(ox.vacios)}</b></div></div>` : '');
   const logo = (document.getElementById('brandLogo') || {}).src || '';
   document.getElementById('tvStage').innerHTML = `
     <header class="tv-h">
@@ -3857,13 +3881,13 @@ function tvRender() {
         <div class="tv-sub">${horario}Jefe de turno: <b>${filled(e.jefe) ? esc(tvShort(e.jefe)) : 'por asignar'}</b></div></div>
       <div class="tv-clock"><b id="tvClock">${hhmm()}</b><span class="${live ? 'live' : ''}">${live ? '● En curso' : 'Última guardada'} · Entrega ${nro} · act. ${tvSeen ? pad(tvSeen.getHours()) + ':' + pad(tvSeen.getMinutes()) : '—'}</span></div>
     </header>
-    <div class="tv-sec tv-movsec">Móviles operativos<span>${operativos} en servicio</span></div>
+    <div class="tv-sec tv-movsec">Móviles operativos<span class="tv-info">${store.settings.bencina ? `<i class="tv-fuel">⛽ Cargar en <b>${esc(store.settings.bencina.toUpperCase())}</b></i>` : ''}<i>Abastecimiento: <b>${filled(e.abast) ? esc(tvShort(e.abast)) : 'por asignar'}</b></i><i><b>${operativos}</b> en servicio</i></span></div>
     <div class="tv-mov">${cards}</div>
     <div class="tv-bot">
       <section class="tv-pan" data-tg="nov"><div class="tv-sec">Novedades del turno<span>${items.length ? items.length + (items.length === 1 ? ' novedad' : ' novedades') : ''}</span></div>
         <div class="tv-win"><div class="tv-roll" id="tvRoll">${items.join('') || '<p class="tv-none">Sin novedades por ahora.</p>'}</div></div></section>
-      <section class="tv-pan" data-tg="res"><div class="tv-sec">Reposición<span>${resv.length > 4 ? `4 de ${resv.length}` : ''}</span></div>${resHtml}</section>
-      <section class="tv-pan" data-tg="o2"><div class="tv-sec">Oxígeno en base</div>${o2Html}</section>
+      <section class="tv-pan" data-tg="res"><div class="tv-sec">Reposición<span>${resv.length > 5 ? `5 de ${resv.length}` : ''}</span></div>${resHtml}</section>
+      <section class="tv-pan" data-tg="o2"><div class="tv-sec">Oxígeno</div>${o2Html}</section>
     </div>`;
   document.querySelectorAll('#tvStage .tv-vidslot').forEach(sl => { const v = tvVid(+sl.dataset.i); sl.appendChild(v); const p = v.play(); if (p && p.catch) p.catch(() => {}); });
   /* si las novedades no caben, desfilan solas hacia arriba */
@@ -3934,7 +3958,16 @@ document.addEventListener('change', ev => {
   const t = ev.target; if (!t.dataset || t.dataset.movnum == null || !canMov()) return;
   const d = store.draft; if (!d.reserva) d.reserva = {};
   if (t.value) d.reserva[t.dataset.movnum] = t.value; else delete d.reserva[t.dataset.movnum];
-  t.dataset.v = t.value; persist(); refresh(); toast('Móvil actualizado');
+  t.dataset.v = t.value;
+  const det = t.closest('.rescell') && t.closest('.rescell').querySelector('.resdet');
+  if (det) { const ph = RES_DET[t.value]; det.hidden = !ph && !det.value; det.placeholder = ph || 'Detalle'; if (ph) det.focus(); }
+  persist(); refresh(); toast('Móvil actualizado');
+});
+document.addEventListener('change', ev => {
+  const t = ev.target; if (!t.dataset || t.dataset.movdet == null || !canMov()) return;
+  const d = store.draft; if (!d.reservaDet) d.reservaDet = {};
+  const v = t.value.trim(); if (v) d.reservaDet[t.dataset.movdet] = v; else delete d.reservaDet[t.dataset.movdet];
+  persist(); refresh(); toast('Detalle guardado');
 });
 const VER_KEY = 'samu-entrega-turno-ver';
 const APP_VER = (() => { try { const t = SELF_SCRIPT ? SELF_SCRIPT.textContent : ''; return t.length + ':' + pinHash(t.slice(0, 80000) + t.slice(-80000)); } catch (e) { return '0'; } })();
