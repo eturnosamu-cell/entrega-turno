@@ -3583,7 +3583,9 @@ const stab = o => JSON.stringify(o, (k, v) => v && typeof v === 'object' && !Arr
 const jeq = (a, b) => stab(a) === stab(b);
 const syncOn = () => !framed && !!scriptUrl() && !!authToken() && ((store.settings.backup || {}).sync !== false) && !SY.noScript;
 function syncView() {
-  const st = {}; SHARED_SETTINGS.forEach(k => { if (store.settings[k] !== undefined) st[k] = store.settings[k]; });
+  /* además de las conocidas, conserva las que ya están en Google: así una versión nueva no pierde datos que esta no conoce */
+  const bs = SY.base && SY.base.live && SY.base.live.settings ? Object.keys(SY.base.live.settings) : [];
+  const st = {}; SHARED_SETTINGS.concat(bs.filter(k => !SHARED_SETTINGS.includes(k))).forEach(k => { if (store.settings[k] !== undefined) st[k] = store.settings[k]; });
   const hist = {}; store.history.forEach(h => { if (h && h.id && !h.ejemplo) hist[h.id] = h; });
   return {live:{draft:store.draft, settings:st, stock:store.stock, recuentos:store.recuentos}, hist};
 }
