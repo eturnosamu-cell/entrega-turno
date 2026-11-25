@@ -906,6 +906,7 @@ html.tvmode body::before{display:none}
 .tv-conn{position:fixed;left:16px;bottom:16px;z-index:30;background:#b45309;color:#fff;border:0;border-radius:10px;padding:10px 16px;font:600 15px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.4)}.tv-act{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;background:#fff;color:#111;border-radius:14px;padding:22px;width:min(440px,92vw);display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:15px system-ui,sans-serif}.tv-act[hidden]{display:none}.tv-act b{font-size:18px}.tv-act-f{display:flex;gap:8px}.tv-act-f input{flex:1;min-width:0;font:16px system-ui;padding:9px;border:1px solid #999;border-radius:8px}.tv-act small{color:#b00020;min-height:1.2em}.tv-act-b{display:flex;gap:8px;justify-content:flex-end}.tv-act-b button{font:600 15px system-ui;padding:9px 16px;border-radius:8px;border:1px solid #999;background:#eee;cursor:pointer}.tv-act-b .pri{background:#1e3a8a;color:#fff;border-color:#1e3a8a}
 .jbtns{display:flex;gap:4px;align-items:center;margin-left:auto}.ebtn{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink-3);font-size:19px;line-height:1;cursor:pointer}.ebtn:hover{background:rgba(0,0,0,.06)}fieldset:disabled .jbtns{display:none}.jitem{grid-template-columns:56px minmax(0,1fr) auto}
 .tgrid.t2{grid-template-columns:repeat(2,minmax(0,1fr))}.tgrid.t2 .tin input{font-size:28px}.thora{margin:0 0 8px;font-weight:700;color:var(--ink-2,#334)}
+.rbox{display:flex;flex-direction:column;align-items:center;gap:2px}.rbox>span{font:700 11px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-3)}.rbox.na{opacity:.45}
 </style>
 </head>
 <body>
@@ -990,6 +991,8 @@ const BASICO = 3;
 const movRoles = i => i === BASICO ? ROLES.filter(([k]) => k !== 'r') : ROLES;
 const movKeys = i => movRoles(i).map(r => r[0]);
 const movRadios = i => movRoles(i).length;
+const RAD_ROL = ['R', 'PM', 'C'], RAD_NOM = ['reanimador', 'paramédico', 'conductor'];
+const radTxt = (m, sep) => (m.radios || []).map((r, k) => filled(r) ? `${RAD_ROL[k]} ${r}` : '').filter(Boolean).join(sep);
 const CREW_KEYS = ['id','r','pm','c','r2','pm2','c2'];
 /* turno dividido: m.r = primer tramo, m.r2 = segundo tramo, m.rH = hora del cambio */
 const TURNO_HRS = {Largo:['08:00','20:00','14:00'], Noche:['20:00','08:00','02:00']};
@@ -1281,7 +1284,7 @@ function movilOptions(v) {
 }
 function movilCard(i, e) {
   const p = `moviles.${i}`;
-  return `<div class="mv" data-movil="${i}"><div class="mv-h"><strong>Móvil ${i+1}${i === BASICO ? ' <span class="mvb">Básico</span>' : ''}</strong><span class="rin" role="group" aria-label="Radios a cargo del móvil ${i+1}"><span class="rlbl">Radios</span>${[0,1,2].map(k => `<input type="text" inputmode="numeric" data-num="int" id="${fid(p+'.radios.'+k)}" data-bind="${p}.radios.${k}" data-radio="${i}.${k}" aria-label="Radio ${k+1} del móvil ${i+1}" autocomplete="off">`).join('')}</span></div>
+  return `<div class="mv" data-movil="${i}"><div class="mv-h"><strong>Móvil ${i+1}${i === BASICO ? ' <span class="mvb">Básico</span>' : ''}</strong><span class="rin" role="group" aria-label="Radios a cargo del móvil ${i+1}"><span class="rlbl">Radios</span>${[0,1,2].map(k => `<label class="rbox${k === 0 && i === BASICO ? ' na' : ''}" for="${fid(p+'.radios.'+k)}"><span>${RAD_ROL[k]}</span><input type="text" inputmode="numeric" data-num="int" id="${fid(p+'.radios.'+k)}" data-bind="${p}.radios.${k}" data-radio="${i}.${k}" aria-label="Radio del ${RAD_NOM[k]} del móvil ${i+1}" autocomplete="off"${k === 0 && i === BASICO ? ' placeholder="—"' : ''}></label>`).join('')}</span></div>
     <div class="fld"><div class="lblrow"><label class="lbl" for="${fid(p+'.id')}">Móvil</label><span class="mv-st"></span></div><select id="${fid(p+'.id')}" data-bind="${p}.id">${movilOptions(e.moviles[i].id)}</select></div>
     ${crewRows(i, e)}
   </div>`;
@@ -1406,7 +1409,7 @@ function renderForm(e) {
       <p class="tinfo">${e.savedAt ? `<b>Cierre:</b> guardada el ${fmtIso(e.savedAt)}${e.savedBy ? ' por ' + esc(e.savedBy) : ''}${e.cierre ? ' · cerrada con su clave' : ''}` : '<b>Inicio:</b> se pone solo cuando el jefe de turno toma la entrega con su clave. <b>Cierre:</b> queda registrado cuando la cierra con su clave.'}</p>`),
     card('s-moviles', 'Móviles y tripulación', `<div class="g-mov">${e.moviles.map((m, i) => movilCard(i, e)).join('')}</div>
       <h3 class="subh">Móviles de reposición <span>disponibles en caso de falla de un móvil en servicio</span></h3>
-      <div class="rt" id="resBox"></div>`, 'Anota las 3 radios al lado de cada móvil. En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
+      <div class="rt" id="resBox"></div>`, 'Anota las radios al lado de cada móvil, en orden: R (reanimador), PM (paramédico) y C (conductor). En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
     card('s-radios', 'Radios', `<div class="grid g3" style="align-items:end">
         <div class="fld"><span class="lbl" id="l-radcarg">Radios cargadas</span>${seg('radios.cargadas', ['SI','NO'], 'NO', 'l-radcarg')}</div>
         <div class="fld"><span class="lbl">Nº en base</span>${stepper('radios.base', 'Radios en base')}</div>
@@ -1642,7 +1645,7 @@ function paintSeg(sg, v) {
   });
 }
 const jefItems = e => Object.keys((e && e.jefatura) || {}).map(id => Object.assign({id}, e.jefatura[id])).filter(j => j && filled(j.txt)).sort((a, b) => String(a.at).localeCompare(String(b.at)));
-const jefHora = j => { const d = j.at ? new Date(j.at) : null; return d && !isNaN(d) ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : ''; };
+const jefHora = j => { const d = j.at ? new Date(j.at) : null; if (!d || isNaN(d)) return ''; const t = `${pad(d.getHours())}:${pad(d.getMinutes())}`; return d.toDateString() === new Date().toDateString() ? t : `${pad(d.getDate())}-${pad(d.getMonth() + 1)} ${t}`; };
 /* gravedad de cada novedad: g verde, y amarillo, r rojo */
 const SEV_NAME = {r:'Rojo', y:'Amarillo', g:'Verde'}, SEV_RANK = {r:0, y:1, g:2};
 const sevRank = s => SEV_RANK[s] != null ? SEV_RANK[s] : 3;
@@ -1652,7 +1655,7 @@ const novItems = e => ['novs', 'jefatura'].flatMap(src => Object.keys((e && e[sr
 const autoNovs = e => { const x = (e && e.extr) || {}; return x.rescatar === 'SI' ? [{id:'auto-extr', sev:'g', tag:'Extricación', txt:`Recuperar material de extricación${filled(x.rescatarLugar) ? ' · ' + x.rescatarLugar : ''}`, por:'Automático · desde Material de extricación'}] : []; };
 const sevPick = k => `<div class="sevpick" id="${k}Sev" role="group" aria-label="Color según gravedad"><span class="sl">Color:</span>${['g','y','r'].map(v => `<button type="button" data-act="pickSev" data-for="${k}" data-sev="${v}" aria-pressed="false"><i></i>${SEV_NAME[v]}</button>`).join('')}</div>`;
 function resetSev(k) { const box = $('#' + k + 'Sev'); if (box) { delete box.dataset.sev; box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false')); } const inp = $('#' + k + 'New'); if (inp) { inp.disabled = true; inp.placeholder = 'Primero elige el color'; } }
-const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por || j.ed ? `<small class="jpor">${esc(j.por || '')}${j.ed ? `${j.por ? ' · ' : ''}editada ${esc(hmOf(j.ed.at))}${j.ed.por && j.ed.por !== j.por ? ' por ' + esc(j.ed.por) : ''}` : ''}</small>` : ''}</span><span class="jbtns"><button type="button" class="ebtn" data-act="editNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}" aria-label="Editar novedad" title="Editar">✎</button><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad" title="Quitar">×</button></span></div>`;
+const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por || j.ed || j.desde ? `<small class="jpor">${[j.por ? esc(j.por) : '', j.desde ? `viene de la entrega ${folio(j.desde)}` : '', j.ed ? `editada ${esc(hmOf(j.ed.at))}${j.ed.por && j.ed.por !== j.por ? ' por ' + esc(j.ed.por) : ''}` : ''].filter(Boolean).join(' · ')}</small>` : ''}</span><span class="jbtns"><button type="button" class="ebtn" data-act="editNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}" aria-label="Editar novedad" title="Editar">✎</button><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad" title="Quitar">×</button></span></div>`;
 function renderNov() {
   const e = cur(), box = $('#novList'); if (!box) return;
   const items = novItems(e).filter(j => !(vencDay(e) && j.txt === VENC_TXT));
@@ -2208,7 +2211,7 @@ function buildPdfK(e, k) {
   const yn2 = v => v || '-', bold = {fontStyle:'bold'};
   sec('Turno', {body:cl([['Turno', e.turno, 'Inicio', fmtDate(e.fecha)], ['Jefe de turno', e.jefe, 'Subrogante', e.subrogante], ['Cierre (guardada)', e.savedAt ? fmtIso(e.savedAt) + (e.cierre ? ' · cerrada por ' + e.cierre.por + ' con su clave' : '') : '—', 'Abastecimiento', e.abast || '']].concat(encOf(e) ? [['A cargo de la entrega', encName(encOf(e)), 'Desde las', hmOf(encOf(e).at)]] : [])), columnStyles:{0:Object.assign({cellWidth:30}, bold), 2:Object.assign({cellWidth:30}, bold)}});
   const movs = e.moviles.map((m, i) => Object.assign({}, m, {_b:i === BASICO})).filter(crewAny);
-  sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, (m.radios || []).filter(filled).join(', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
+  sec('Móviles y tripulación', {head:[['Móvil', 'Radios', 'Reanimador (R)', 'Paramédico (PM)', 'Conductor (C)']], body:cl(movs.length ? movs.map(m => [m.id, radTxt(m, ', '), m._b ? 'Móvil básico' : crewTxt(e, m, 'r'), crewTxt(e, m, 'pm'), crewTxt(e, m, 'c')]) : [['Sin móviles registrados', '', '', '', '']]), columnStyles:{0:{cellWidth:24}, 1:{cellWidth:20}}});
   const x = e.extr, b = e.bodega, sq = e.salaeq;
   sec('Revisión de áreas', {head:[['Área', 'Encargado', 'Detalle']], body:cl([
     ['Estadística', '', `Siniestros durante el turno: ${yn2(e.est.siniestros)}${e.est.siniestros === 'SI' && e.est.incTipo ? ' · Incidente: ' + e.est.incTipo + (e.est.incDet ? ' (' + e.est.incDet + ')' : '') : ''}\nNotificación FAF: ${yn2(e.est.faf)}${e.est.faf === 'SI' && e.est.fafNombre ? ' · ' + e.est.fafNombre + (e.est.fafEnviado ? ' · correo a jefatura ' + hmOf(e.est.fafEnviado) : '') : ''}`],
@@ -2788,6 +2791,8 @@ const actions = {
     store.history.push(e); sortHistory();
     store.settings.nextNum++;
     store.draft = blankEntry();
+    /* las novedades siguen en el turno siguiente hasta que un jefe de turno las quite */
+    ['novs', 'jefatura'].forEach(src => Object.entries(e[src] || {}).forEach(([id, j]) => { if (j && filled(j.txt)) store.draft[src][id] = Object.assign(clone(j), {desde:j.desde || e.numero}); }));
     e.stockSnap = {}; [e.controlados, e.generales, e.parches].forEach(arr => arr.forEach(x => { if ((num(x.uso) || 0) > 0) { const i = stockInfo(x.name); if (i) e.stockSnap[x.name] = i.disp; } }));
     closeSheet(); persist();
     view = {mode:'draft', id:null};
@@ -4105,7 +4110,7 @@ function tvRender() {
     const rs = m.radios.filter(filled);
     return `<div class="tv-card${any ? '' : ' empty'}"><div class="tv-amb"><div class="tv-ch"><b>${esc(tvMovName(m, i))}</b>${pill}</div><span class="tv-vidslot" data-i="${i}"></span></div>
       <div class="tv-roles">${i === BASICO ? '<div class="tv-rl">Tipo</div><div class="tv-rv">Básico</div>' : role('Reanimador', m, 'r')}${role('Paramédico', m, 'pm')}${role('Conductor', m, 'c')}</div>
-      <div class="tv-rad"><span>Radios</span><b>${rs.length ? rs.map(esc).join(' · ') : '—'}</b></div></div>`;
+      <div class="tv-rad"><span>Radios</span><b>${rs.length ? esc(radTxt(m, ' · ')) : '—'}</b></div></div>`;
   }).join('');
   const operativos = e.moviles.filter((m, i) => filled(m.id) && movKeys(i).every(k => crewOk(m, k))).length;
 
