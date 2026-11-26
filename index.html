@@ -3648,10 +3648,10 @@ function renderAll() {
    (token) que dura el turno; sin ese permiso Google no entrega ni recibe datos.
    La jefatura (MJ, SA) y el administrador entran también a Ajustes y Stock y manejan las claves. */
 const SES_KEY = 'samu-entrega-sesion', OFF_KEY = 'samu-entrega-offline', TV_KEY = 'samu-entrega-tv';
-const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora asistencial', T1:'Turno 1', T2:'Turno 2', T3:'Turno 3', T4:'Turno 4', AMB:'Encargado de móviles'};
+const JEF_NOMBRE = {MJ:'Médico jefe', SA:'Supervisora de base', T1:'Turno 1', T2:'Turno 2', T3:'Turno 3', T4:'Turno 4', AMB:'Encargado de móviles'};
 let SES = null, loginBusy = false, claimAfterLogin = false, OFF_PIN = '', offBusy = false;
 /* por ahora solo entran los reanimadores (y AMB); estos códigos quedan desactivados, pero sus claves siguen guardadas en Google */
-const BLOQ = ['T1', 'T2', 'T3', 'T4', 'MJ', 'SA'];
+const BLOQ = ['T1', 'T2', 'T3', 'T4', 'MJ'];
 const TEST_TOK = 'samu-entrega-prueba';
 const URL_KEY = (() => { try { return new URLSearchParams(location.search).get('k') || ''; } catch (e) { return ''; } })();
 function testTokObj() { try { const t = JSON.parse(localStorage.getItem(TEST_TOK) || 'null'); return t && t.exp > Date.now() && (!URL_KEY || t.k === URL_KEY) ? t : null; } catch (e) { return null; } }
@@ -3886,9 +3886,10 @@ async function accesosSheet() {
     ${a.tiene && code !== (SES && SES.code) ? `<button type="button" class="xbtn" data-act="accDel" data-code="${esc(code)}" aria-label="Quitar acceso de ${esc(code)}" title="Quitar acceso">×</button>` : '<span></span>'}</div>`; };
   openSheet(`<h2>Claves de acceso</h2>
     <p class="muted">Las claves se guardan en Google, nunca en este archivo. Cada persona entra con su código y su clave (4 a 8 números). Al cambiar una clave, esa persona debe volver a entrar en todos sus equipos.</p>
-    <p class="muted">MJ, SA y T1 a T4 están desactivados por ahora: no pueden entrar, pero sus claves siguen guardadas en Google por si se vuelven a activar.</p>
+    <p class="muted">MJ y T1 a T4 están desactivados por ahora: no pueden entrar, pero sus claves siguen guardadas en Google por si se vuelven a activar.</p>
+    <h3>Supervisora de base (administradora: puede hacer todo lo que hace R7)</h3><div class="acclist">${row('SA', '', true)}</div>
     <h3>Encargado de móviles (estado de móviles y novedades de la flota, en cualquier turno)</h3><div class="acclist">${row('AMB', '', true)}</div>
-    <h3>Reanimadores (el primero que entra en el turno queda a cargo de la entrega)</h3><div class="acclist">${reas.map(p => row(p.clave.toUpperCase(), titleCase(p.nombre) + (p.sup ? ' (suplente)' : ''), false)).join('')}</div>
+    <h3>Reanimadores (el jefe de turno toma la entrega con su clave)</h3><div class="acclist">${reas.map(p => row(p.clave.toUpperCase(), titleCase(p.nombre) + (p.sup ? ' (suplente)' : ''), false)).join('')}</div>
     <h3>Generar claves nuevas para todos</h3>
     <p class="muted">Crea al azar una clave nueva de 4 números para cada reanimador y para AMB, la guarda en Google y te muestra la lista para imprimir. Las claves anteriores dejan de servir. Tu propia clave también cambia.</p>
     <div class="sheet-act"><button type="button" class="btn primary" data-act="accGen">Generar claves nuevas para todos</button></div>
