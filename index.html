@@ -1759,6 +1759,7 @@ function renderBanner() {
     const quien = en ? `La entrega está a cargo de <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}.` : 'Todavía nadie ha tomado esta entrega.';
     let txt, btn;
     if (amb) { txt = '<b>Encargado de móviles:</b> puedes cambiar el estado de los móviles y agregar novedades de la flota en cualquier turno. El resto de la entrega solo se puede mirar.'; btn = '<button type="button" class="btn sm primary" data-act="ambNov">Agregar novedad</button><button type="button" class="btn sm" data-act="movEstado">Móviles</button>'; }
+    else if (isRea() && !en && !baseTok() && !(SES && SES.admin)) { txt = '<b>MODO SOLO MIRAR.</b> Nadie ha tomado esta entrega todavía. El jefe de turno la toma desde uno de los computadores de la base.'; btn = ''; }
     else if (isRea() && !en) { txt = '<b>MODO SOLO MIRAR.</b> Nadie ha tomado esta entrega todavía. Si eres el jefe de turno, toca «Soy el jefe de turno» y confirma con tu clave: solo tú podrás modificarla. Si entraste a mirar, no tienes que hacer nada.'; btn = '<button type="button" class="btn sm primary" data-act="encTake">Soy el jefe de turno</button>'; }
     else if (isRea()) { txt = `<b>MODO SOLO MIRAR.</b> El jefe de turno a cargo es <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}. Ves la entrega en vivo, pero no puedes modificar nada.`; btn = ''; }
     else { txt = `<b>MODO SOLO MIRAR.</b> ${quien} Solo el jefe de turno la modifica, después de confirmar con su clave.`; btn = '<button type="button" class="btn sm primary" data-act="logout">Entrar con clave</button>'; }
@@ -2684,6 +2685,7 @@ const actions = {
   },
   async encTake() {
     if (!isRea()) { toast('Para tomar la entrega entra con tu código de reanimador y tu clave.'); return; }
+    if (!baseTok() && !(SES && SES.admin)) { openSheet(`<h2>Solo desde la base</h2><p>La entrega de turno solo se puede tomar desde los <b>computadores de la base SAMU</b>. Desde este equipo puedes mirarla, pero no tomarla.</p><div class="sheet-act"><button type="button" class="btn primary" data-act="closeSheet">Entendido</button></div>`); return; }
     if (syncOn()) { try { await syncNow(); } catch (e) {} }
     const en = encOf(store.draft);
     if (en) { renderAll(); toast(`La entrega ya la tomó ${encName(en)}`); return; }
@@ -2747,6 +2749,28 @@ const actions = {
     if (last >= 4) return;
     RESC_SHOW = Math.max(RESC_SHOW, last + 1); refresh();
     const nx = document.getElementById(fid('extr.rescatarLugar' + (last + 1))); if (nx) nx.focus();
+  },
+  async bases() {
+    if (!(SES && SES.admin)) return;
+    openSheet('<h2>Computadores de la base</h2><p class="muted">Cargando…</p>');
+    let list = []; try { list = (await syncPost({action:'baseList'})).list || []; } catch (e) { openSheet(`<h2>Computadores de la base</h2><p>No se pudo conectar con Google.</p><div class="sheet-act"><button type="button" class="btn" data-act="settings">Volver</button></div>`); return; }
+    const me = baseInfo();
+    openSheet(`<h2>Computadores de la base</h2>
+      <p>La entrega solo se puede tomar desde estos equipos. Desde cualquier otro (celulares, computadores de la casa) se puede mirar, pero no tomar. Tú y la supervisora de base pueden editar desde cualquier lado.</p>
+      <div class="acclist">${list.length ? list.map(b => `<div class="accrow"><b>${esc(b.nombre)}</b><span class="muted">${me && me.id === b.id ? 'este equipo' : 'marcado el ' + esc(fmtDH(new Date(b.at).toISOString()))}</span><button type="button" class="xbtn" data-act="baseDel" data-id="${esc(b.id)}" title="Quitar" aria-label="Quitar ${esc(b.nombre)}">×</button></div>`).join('') : '<p class="muted">Todavía no hay equipos marcados.</p>'}</div>
+      ${me && list.some(b => b.id === me.id) ? '<p><b>Este equipo ya es de la base.</b></p>' : `<label class="fld" for="baseNom"><span class="lbl">Nombre de este equipo</span><input id="baseNom" type="text" value="Computador ${list.length + 1} de la base" autocomplete="off"></label><div class="sheet-act"><button type="button" class="btn primary" data-act="baseSet">Marcar este computador como de la base</button></div>`}
+      <div class="sheet-act"><button type="button" class="btn" data-act="settings">Volver a Ajustes</button><button type="button" class="btn" data-act="closeSheet">Cerrar</button></div>`);
+  },
+  async baseSet(a) {
+    a.disabled = true;
+    try { const j = await syncPost({action:'baseSet', nombre:($('#baseNom') || {}).value || ''}); localStorage.setItem(BASE_KEY, JSON.stringify({id:j.id, token:j.token, nombre:($('#baseNom') || {}).value || 'Computador de la base'})); toast('Este computador quedó marcado como de la base'); }
+    catch (e) { toast('No se pudo marcar: revisa internet'); }
+    actions.bases();
+  },
+  async baseDel(a) {
+    if (!armed(a, '¿Quitar?')) return;
+    try { await syncPost({action:'baseDel', id:a.dataset.id}); const me = baseInfo(); if (me && me.id === a.dataset.id) localStorage.removeItem(BASE_KEY); toast('Equipo quitado'); } catch (e) { toast('No se pudo quitar'); }
+    actions.bases();
   },
   recNov(a) {
     const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, j = store.draft[src] && store.draft[src][id];
@@ -3198,6 +3222,8 @@ const actions = {
       <div id="bkHost">${backupBoxHtml()}</div>
       <h3>Claves de acceso</h3>
       ${SES && SES.admin ? `<div class="srow"><p style="flex:1">Las claves de jefatura, jefes de turno, ambulancias y reanimadores se guardan en Google.</p><button type="button" class="btn sm" data-act="accesos">Ver y cambiar claves</button></div>` : '<p class="muted">Solo la jefatura o el administrador pueden cambiar claves.</p>'}
+      <h3>Computadores de la base</h3>
+      ${SES && SES.admin ? `<div class="srow"><p style="flex:1">Solo en estos equipos se puede tomar la entrega. ${baseInfo() ? `Este equipo <b>sí es de la base</b> (${esc(baseInfo().nombre)}).` : 'Este equipo <b>no</b> está marcado como de la base.'}</p><button type="button" class="btn sm" data-act="bases">Ver y marcar equipos</button></div>` : `<p class="muted">${baseInfo() ? 'Este equipo es de la base: aquí se puede tomar la entrega.' : 'Este equipo no es de la base: desde aquí no se puede tomar la entrega.'}</p>`}
       <h3>Personal</h3>
       <div class="srow"><p style="flex:1">${staffP().length} funcionarios con clave (R, PM y C).</p><button type="button" class="btn sm" data-act="personal">Ver y editar nómina</button></div>
       <div class="srow"><p style="flex:1">${abastList().length} personas de abastecimiento.</p><button type="button" class="btn sm" data-act="abastEdit">Ver y editar abastecimiento</button></div>
@@ -3967,11 +3993,15 @@ function mergeResp(base, r) {
   (r.hist || []).forEach(h => { if (!h || !h.id) return; if (h._del) delete base.hist[h.id]; else base.hist[h.id] = h; });
   return base;
 }
+/* computadores de la base: solo en ellos se puede tomar la entrega */
+const BASE_KEY = 'samu-entrega-base';
+const baseInfo = () => { try { return JSON.parse(localStorage.getItem(BASE_KEY) || 'null'); } catch (e) { return null; } };
+const baseTok = () => { const b = baseInfo(); return b && b.token ? b.token : ''; };
 async function syncPost(payload) {
   const c = scriptCfg(); if (!c.url) throw {code:'script_cfg'};
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 25000);
   let r;
-  try { r = await fetch(c.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({token:c.token}, payload)), redirect:'follow', signal:ctl.signal}); }
+  try { r = await fetch(c.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({token:c.token}, baseTok() ? {base:baseTok()} : {}, payload)), redirect:'follow', signal:ctl.signal}); }
   catch (x) { throw {code:'net'}; }
   finally { clearTimeout(to); }
   let j = null; try { j = JSON.parse(await r.text()); } catch (x) {}
