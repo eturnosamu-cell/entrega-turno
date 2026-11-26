@@ -908,6 +908,7 @@ html.tvmode body::before{display:none}
 .tgrid.t2{grid-template-columns:repeat(2,minmax(0,1fr))}.tgrid.t2 .tin input{font-size:28px}.thora{margin:0 0 8px;font-weight:700;color:var(--ink-2,#334)}
 .rbox{display:flex;flex-direction:column;align-items:center;gap:2px}.rbox>span{font:700 11px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-3)}.rbox.na{opacity:.45}
 .jrec{display:block;margin-top:4px;font-weight:700;color:var(--good,#1d7a3a)}.jrec.pend{color:var(--warn-ink,#8a5a00)}.recbtn{white-space:nowrap}
+.rbox>label{font:700 11px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-3)}.rpbtn{border:1px solid var(--line);background:transparent;border-radius:6px;font:700 10px/1 var(--f-display);padding:3px 6px;color:var(--ink-3);cursor:pointer}.rbox input.isrp{font-size:15px;color:var(--info,#1e40af)}
 </style>
 </head>
 <body>
@@ -993,7 +994,15 @@ const movRoles = i => i === BASICO ? ROLES.filter(([k]) => k !== 'r') : ROLES;
 const movKeys = i => movRoles(i).map(r => r[0]);
 const movRadios = i => movRoles(i).length;
 const RAD_ROL = ['R', 'PM', 'C'], RAD_NOM = ['reanimador', 'paramédico', 'conductor'];
-const radTxt = (m, sep) => (m.radios || []).map((r, k) => filled(r) ? `${RAD_ROL[k]} ${r}` : '').filter(Boolean).join(sep);
+const isRP = r => String(r || '').trim().toUpperCase() === 'RP';
+const radTxt = (m, sep) => (m.radios || []).map((r, k) => filled(r) ? `${RAD_ROL[k]} ${isRP(r) ? 'radio propia' : r}` : '').filter(Boolean).join(sep);
+/* dónde está cada número de radio (móviles y registro); la radio propia (RP) no cuenta */
+function radioUsos(e) {
+  const o = {}, put = (r, where, path) => { if (!filled(r) || isRP(r)) return; const k = rkey(r); (o[k] = o[k] || []).push({where, path}); };
+  e.moviles.forEach((m, i) => (m.radios || []).forEach((r, k) => put(r, `${movName(e, i)} (${RAD_ROL[k]})`, `moviles.${i}.radios.${k}`)));
+  ((e.radios && e.radios.registro) || []).forEach((x, i) => put(x.num, `el registro de radios${filled(x.func) ? ' (' + x.func + ')' : ''}`, `radios.registro.${i}.num`));
+  return o;
+}
 const CREW_KEYS = ['id','r','pm','c','r2','pm2','c2'];
 /* turno dividido: m.r = primer tramo, m.r2 = segundo tramo, m.rH = hora del cambio */
 const TURNO_HRS = {Largo:['08:00','20:00','14:00'], Noche:['20:00','08:00','02:00']};
@@ -1285,19 +1294,19 @@ function movilOptions(v) {
 }
 function movilCard(i, e) {
   const p = `moviles.${i}`;
-  return `<div class="mv" data-movil="${i}"><div class="mv-h"><strong>Móvil ${i+1}${i === BASICO ? ' <span class="mvb">Básico</span>' : ''}</strong><span class="rin" role="group" aria-label="Radios a cargo del móvil ${i+1}"><span class="rlbl">Radios</span>${[0,1,2].map(k => `<label class="rbox${k === 0 && i === BASICO ? ' na' : ''}" for="${fid(p+'.radios.'+k)}"><span>${RAD_ROL[k]}</span><input type="text" inputmode="numeric" data-num="int" id="${fid(p+'.radios.'+k)}" data-bind="${p}.radios.${k}" data-radio="${i}.${k}" aria-label="Radio del ${RAD_NOM[k]} del móvil ${i+1}" autocomplete="off"${k === 0 && i === BASICO ? ' placeholder="—"' : ''}></label>`).join('')}</span></div>
+  return `<div class="mv" data-movil="${i}"><div class="mv-h"><strong>Móvil ${i+1}${i === BASICO ? ' <span class="mvb">Básico</span>' : ''}</strong><span class="rin" role="group" aria-label="Radios a cargo del móvil ${i+1}"><span class="rlbl">Radios</span>${[0,1,2].map(k => `<span class="rbox${k === 0 && i === BASICO ? ' na' : ''}"><label for="${fid(p+'.radios.'+k)}">${RAD_ROL[k]}</label><input type="text" inputmode="numeric" data-num="radio" id="${fid(p+'.radios.'+k)}" data-bind="${p}.radios.${k}" data-radio="${i}.${k}" aria-label="Radio del ${RAD_NOM[k]} del móvil ${i+1}" autocomplete="off"${k === 0 && i === BASICO ? ' placeholder="—"' : ''}><button type="button" class="rpbtn" data-act="radRP" data-radio="${i}.${k}" title="Radio propia" aria-label="Radio propia del ${RAD_NOM[k]} del móvil ${i+1}">RP</button></span>`).join('')}</span></div>
     <div class="fld"><div class="lblrow"><label class="lbl" for="${fid(p+'.id')}">Móvil</label><span class="mv-st"></span></div><select id="${fid(p+'.id')}" data-bind="${p}.id">${movilOptions(e.moviles[i].id)}</select></div>
     ${crewRows(i, e)}
   </div>`;
 }
 const movName = (e, i) => e.moviles[i].id || `Móvil ${i+1}`;
 const rkey = r => String(r).trim().replace(/^0+(?=\d)/, '');
-function radioOwners(e) { const o = {}; e.moviles.forEach((m, i) => (m.radios || []).forEach(r => { if (filled(r)) { const k = rkey(r); (o[k] = o[k] || []).push(i); } })); return o; }
+function radioOwners(e) { const o = {}; e.moviles.forEach((m, i) => (m.radios || []).forEach(r => { if (filled(r) && !isRP(r)) { const k = rkey(r); (o[k] = o[k] || []).push(i); } })); return o; }
 function paintRadioSelects() {
   const e = cur(), own = radioOwners(e);
   $$('#fs [data-radio]').forEach(el => {
     const [i, k] = el.dataset.radio.split('.').map(Number), v = e.moviles[i].radios[k];
-    el.classList.toggle('dup', filled(v) && (own[rkey(v)] || []).length > 1);
+    el.classList.toggle('dup', filled(v) && (own[rkey(v)] || []).length > 1); el.classList.toggle('isrp', isRP(v));
   });
 }
 function prefillRadios(i, id) {
@@ -1375,7 +1384,7 @@ function rerenderCascos() { const box = $('#cascoRows'); if (!box) return; box.i
 function radioRows(e) {
   const rows = e.radios.registro.map((r, i) => `<div class="rrow">
       ${cbx(`radios.registro.${i}.func`, 'all', 'Funcionario')}
-      <input type="text" id="${fid('radios.registro.'+i+'.num')}" data-bind="radios.registro.${i}.num" aria-label="Nº de radio" autocomplete="off" inputmode="numeric">
+      <input type="text" id="${fid('radios.registro.'+i+'.num')}" data-bind="radios.registro.${i}.num" data-num="int" aria-label="Nº de radio" autocomplete="off" inputmode="numeric">
       <label class="chk"><input type="checkbox" id="${fid('radios.registro.'+i+'.ent')}" data-bind="radios.registro.${i}.ent"> Entregada</label>
       <button type="button" class="xbtn" data-act="delRadio" data-i="${i}" aria-label="Quitar fila">×</button>
     </div>`).join('');
@@ -1410,7 +1419,7 @@ function renderForm(e) {
       <p class="tinfo">${e.savedAt ? `<b>Cierre:</b> guardada el ${fmtIso(e.savedAt)}${e.savedBy ? ' por ' + esc(e.savedBy) : ''}${e.cierre ? ' · cerrada con su clave' : ''}` : '<b>Inicio:</b> se pone solo cuando el jefe de turno toma la entrega con su clave. <b>Cierre:</b> queda registrado cuando la cierra con su clave.'}</p>`),
     card('s-moviles', 'Móviles y tripulación', `<div class="g-mov">${e.moviles.map((m, i) => movilCard(i, e)).join('')}</div>
       <h3 class="subh">Móviles de reposición <span>disponibles en caso de falla de un móvil en servicio</span></h3>
-      <div class="rt" id="resBox"></div>`, 'Anota las radios al lado de cada móvil, en orden: R (reanimador), PM (paramédico) y C (conductor). En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
+      <div class="rt" id="resBox"></div>`, 'Anota las radios al lado de cada móvil, en orden: R (reanimador), PM (paramédico) y C (conductor). Si usa radio propia, toca RP. Un número de radio no se puede repetir. En la tripulación toca el campo para ver la lista, escribe la clave (R7, PM12, C14) o el apellido si no tiene clave.'),
     card('s-radios', 'Radios', `<div class="grid g3" style="align-items:end">
         <div class="fld"><span class="lbl" id="l-radcarg">Radios cargadas</span>${seg('radios.cargadas', ['SI','NO'], 'NO', 'l-radcarg')}</div>
         <div class="fld"><span class="lbl">Nº en base</span>${stepper('radios.base', 'Radios en base')}</div>
@@ -2694,6 +2703,13 @@ const actions = {
       <div class="sheet-act"><button type="button" class="btn" data-act="${amb && isRO() ? 'ambNov' : 'closeSheet'}">Cancelar</button><button type="button" class="btn primary" data-act="editNovSave" data-src="${src}" data-id="${esc(id)}">Guardar cambios</button></div>`);
     const t = $('#edTxt'); t.value = j.txt || ''; t.focus(); t.setSelectionRange(t.value.length, t.value.length);
   },
+  radRP(a) {
+    if (isRO()) return;
+    const [i, k] = a.dataset.radio.split('.').map(Number), m = cur().moviles[i]; if (!m) return;
+    m.radios[k] = isRP(m.radios[k]) ? '' : 'RP';
+    const el = document.getElementById(fid(`moviles.${i}.radios.${k}`)); if (el) el.value = m.radios[k];
+    changed();
+  },
   recNov(a) {
     const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, j = store.draft[src] && store.draft[src][id];
     if (!j || isRO()) return;
@@ -3483,6 +3499,7 @@ document.addEventListener('input', ev => {
   let v = el.type === 'checkbox' ? el.checked : el.value;
   if (el.dataset.num === 'int') { const c = v.replace(/[^0-9]/g, ''); if (c !== v) { el.value = c; v = c; } }
   if (el.dataset.num === 'dec') { const c = v.replace(/[^0-9,.\-]/g, ''); if (c !== v) { el.value = c; v = c; } }
+  if (el.dataset.num === 'radio') { const u = v.toUpperCase().replace(/\s/g, ''); const c = u === 'R' || u === 'RP' ? u : /RP/.test(u) ? 'RP' : u.replace(/[^0-9]/g, ''); if (c !== v) { el.value = c; v = c; } }
   set(cur(), el.dataset.bind, v);
   if (el.dataset.staff) { if (cbxCur && cbxCur.input === el) cbxRender(cbxCur.wrap); else cbxOpen(el); }
   const mh = el.dataset.bind.match(/^moviles\.(\d+)\.(r|pm|c)H$/);
@@ -3493,6 +3510,14 @@ document.addEventListener('input', ev => {
 });
 document.addEventListener('change', ev => {
   const t = ev.target;
+  if (t.dataset && t.dataset.bind && (t.dataset.radio || /^radios\.registro\.\d+\.num$/.test(t.dataset.bind)) && !isRO()) {
+    const v = String(t.value || '').trim();
+    if (t.dataset.radio && v === 'R') { t.value = ''; set(cur(), t.dataset.bind, ''); changed(); return; }
+    if (v && !isRP(v)) {
+      const otros = (radioUsos(cur())[rkey(v)] || []).filter(u => u.path !== t.dataset.bind);
+      if (otros.length) { t.value = ''; set(cur(), t.dataset.bind, ''); changed(); openSheet(`<h2>Radio ${esc(v)} repetida</h2><p>La radio <b>${esc(v)}</b> ya está anotada en <b>${esc(otros[0].where)}</b>. Un número de radio no se puede repetir: revisa cuál corresponde.</p><div class="sheet-act"><button type="button" class="btn primary" data-act="closeSheet">Entendido</button></div>`); return; }
+    }
+  }
   if (t.id === 'impFile' && t.files[0]) { importBackup(t.files[0]); return; }
   if (t.dataset && t.dataset.accname) { syncPost({action:'accSet', code:t.dataset.accname, nombre:t.value.trim()}).then(() => toast('Nombre guardado'), () => toast('No se pudo guardar el nombre')); return; }
   if (t.id === 'bkSync') { store.settings.backup = Object.assign(store.settings.backup || {}, {sync:t.checked}); persist(); SY.noScript = false; if (t.checked) syncStart(); else syncStop(); return; }
