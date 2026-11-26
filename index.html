@@ -1759,7 +1759,7 @@ function renderBanner() {
     const quien = en ? `La entrega está a cargo de <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}.` : 'Todavía nadie ha tomado esta entrega.';
     let txt, btn;
     if (amb) { txt = '<b>Encargado de móviles:</b> puedes cambiar el estado de los móviles y agregar novedades de la flota en cualquier turno. El resto de la entrega solo se puede mirar.'; btn = '<button type="button" class="btn sm primary" data-act="ambNov">Agregar novedad</button><button type="button" class="btn sm" data-act="movEstado">Móviles</button>'; }
-    else if (isRea() && !en && !baseTok() && !(SES && SES.admin)) { txt = '<b>MODO SOLO MIRAR.</b> Nadie ha tomado esta entrega todavía. El jefe de turno la toma desde uno de los computadores de la base.'; btn = ''; }
+    else if (isRea() && !en && baseBlock()) { txt = '<b>MODO SOLO MIRAR.</b> Nadie ha tomado esta entrega todavía. El jefe de turno la toma desde uno de los computadores de la base.'; btn = ''; }
     else if (isRea() && !en) { txt = '<b>MODO SOLO MIRAR.</b> Nadie ha tomado esta entrega todavía. Si eres el jefe de turno, toca «Soy el jefe de turno» y confirma con tu clave: solo tú podrás modificarla. Si entraste a mirar, no tienes que hacer nada.'; btn = '<button type="button" class="btn sm primary" data-act="encTake">Soy el jefe de turno</button>'; }
     else if (isRea()) { txt = `<b>MODO SOLO MIRAR.</b> El jefe de turno a cargo es <b>${esc(encName(en))}</b> desde las ${hmOf(en.at)}. Ves la entrega en vivo, pero no puedes modificar nada.`; btn = ''; }
     else { txt = `<b>MODO SOLO MIRAR.</b> ${quien} Solo el jefe de turno la modifica, después de confirmar con su clave.`; btn = '<button type="button" class="btn sm primary" data-act="logout">Entrar con clave</button>'; }
@@ -2685,7 +2685,7 @@ const actions = {
   },
   async encTake() {
     if (!isRea()) { toast('Para tomar la entrega entra con tu código de reanimador y tu clave.'); return; }
-    if (!baseTok() && !(SES && SES.admin)) { openSheet(`<h2>Solo desde la base</h2><p>La entrega de turno solo se puede tomar desde los <b>computadores de la base SAMU</b>. Desde este equipo puedes mirarla, pero no tomarla.</p><div class="sheet-act"><button type="button" class="btn primary" data-act="closeSheet">Entendido</button></div>`); return; }
+    if (baseBlock()) { openSheet(`<h2>Solo desde la base</h2><p>La entrega de turno solo se puede tomar desde los <b>computadores de la base SAMU</b>. Desde este equipo puedes mirarla, pero no tomarla.</p><div class="sheet-act"><button type="button" class="btn primary" data-act="closeSheet">Entendido</button></div>`); return; }
     if (syncOn()) { try { await syncNow(); } catch (e) {} }
     const en = encOf(store.draft);
     if (en) { renderAll(); toast(`La entrega ya la tomó ${encName(en)}`); return; }
@@ -3997,6 +3997,8 @@ function mergeResp(base, r) {
 const BASE_KEY = 'samu-entrega-base';
 const baseInfo = () => { try { return JSON.parse(localStorage.getItem(BASE_KEY) || 'null'); } catch (e) { return null; } };
 const baseTok = () => { const b = baseInfo(); return b && b.token ? b.token : ''; };
+let BASES_ON = false; // la regla parte cuando hay al menos un computador marcado
+const baseBlock = () => BASES_ON && !baseTok() && !(SES && SES.admin);
 async function syncPost(payload) {
   const c = scriptCfg(); if (!c.url) throw {code:'script_cfg'};
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 25000);
@@ -4006,6 +4008,7 @@ async function syncPost(payload) {
   finally { clearTimeout(to); }
   let j = null; try { j = JSON.parse(await r.text()); } catch (x) {}
   if (!j) throw {code:'bad'};
+  if (typeof j.bases === 'number' && BASES_ON !== (j.bases > 0)) { BASES_ON = j.bases > 0; try { renderBanner(); } catch (x) {} }
   if (!j.ok) { if (j.error === 'auth') { setTimeout(authLost, 0); throw {code:'auth'}; } throw {code: j.error === 'token' ? 'old' : j.error === 'accion' ? 'old' : 'bad', detail:j.error}; }
   return j;
 }
