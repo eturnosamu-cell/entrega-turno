@@ -1680,6 +1680,7 @@ const REC_T = {
 };
 let RESC_SHOW = 1;
 const recT = j => REC_T[j.rtipo] || REC_T.rescatar;
+const nTxt = j => j.kind === 'rec' && (!j.rtipo || j.rtipo === 'rescatar') ? String(j.txt || '').replace(/^Material de extricación por (rescatar|recuperar) · /, '') : j.txt;
 const rescList = x => [1, 2, 3, 4].map(n => (x || {})['rescatarLugar' + (n > 1 ? n : '')]).filter(filled);
 const recId = (e, t, n = 1) => (t === 'rescatar' ? 'rec-extr' + (n > 1 ? n : '') + '-' : 'rec-' + t + '-') + ((e && e.id) || '');
 const recTxt = (x, t) => `${REC_T[t].txt}${filled(x[REC_T[t].l]) ? ' · ' + x[REC_T[t].l] : ''}`;
@@ -1689,7 +1690,7 @@ function syncRecNov(e) {
   Object.keys(REC_T).forEach(t => {
     const rows = t === 'rescatar' ? [1, 2, 3, 4] : [1];
     rows.forEach(n => {
-      const id = recId(e, t, n), j = e.novs[id], fl = REC_T[t].l + (n > 1 ? n : ''), txt = `${REC_T[t].txt}${filled(x[fl]) ? ' · ' + x[fl] : ''}`;
+      const id = recId(e, t, n), j = e.novs[id], fl = REC_T[t].l + (n > 1 ? n : ''), txt = t === 'rescatar' ? (filled(x[fl]) ? String(x[fl]).trim() : 'Material por rescatar') : `${REC_T[t].txt}${filled(x[fl]) ? ' · ' + x[fl] : ''}`;
       if (x[REC_T[t].f] === 'SI' && (n === 1 || filled(x[fl]))) {
         if (!j) e.novs[id] = {at:new Date().toISOString(), txt, sev:'g', kind:'rec', rtipo:t, rrow:n, por:SES ? sesLabel() : ''};
         else if (!j.recup && j.txt !== txt) j.txt = txt;
@@ -1698,10 +1699,10 @@ function syncRecNov(e) {
   });
 }
 const fmtDH = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const novTxt = j => j.txt + (j.kind !== 'rec' ? '' : j.recup ? ` · ${recT(j).ok.toUpperCase()} por ${j.recup.por} el ${fmtDH(j.recup.at)}` : ` · ${recT(j).no.toUpperCase()}`);
+const novTxt = j => nTxt(j) + (j.kind !== 'rec' ? '' : j.recup ? ` · ${recT(j).ok.toUpperCase()} por ${j.recup.por} el ${fmtDH(j.recup.at)}` : ` · ${recT(j).no.toUpperCase()}`);
 const sevPick = k => `<div class="sevpick" id="${k}Sev" role="group" aria-label="Color según gravedad"><span class="sl">Color:</span>${['g','y','r'].map(v => `<button type="button" data-act="pickSev" data-for="${k}" data-sev="${v}" aria-pressed="false"><i></i>${SEV_NAME[v]}</button>`).join('')}</div>`;
 function resetSev(k) { const box = $('#' + k + 'Sev'); if (box) { delete box.dataset.sev; box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false')); } const inp = $('#' + k + 'New'); if (inp) { inp.disabled = true; inp.placeholder = 'Primero elige el color'; } }
-const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por || j.ed || j.desde ? `<small class="jpor">${[j.por ? esc(j.por) : '', j.desde ? `viene de la entrega ${folio(j.desde)}` : '', j.ed ? `editada ${esc(hmOf(j.ed.at))}${j.ed.por && j.ed.por !== j.por ? ' por ' + esc(j.ed.por) : ''}` : ''].filter(Boolean).join(' · ')}</small>` : ''}${j.recup ? `<small class="jrec">✓ ${recT(j).ok} por ${esc(j.recup.por)} · ${esc(fmtDH(j.recup.at))}</small>` : j.kind === 'rec' ? '<small class="jrec pend">Sigue en la entrega siguiente hasta que se resuelva</small>' : ''}</span>${j.kind === 'rec' ? `<span class="rstat ${j.recup ? 'ok' : 'no'}">${j.recup ? '✓ ' + recT(j).ok : recT(j).no}</span>` : ''}<span class="jbtns">${j.kind === 'rec' && !j.recup ? `<button type="button" class="btn sm primary recbtn" data-act="recNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}">${recT(j).marca}</button>` : ''}<button type="button" class="ebtn" data-act="editNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}" aria-label="Editar novedad" title="Editar">✎</button><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad" title="Quitar">×</button></span></div>`;
+const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(nTxt(j))}${j.por || j.ed || j.desde ? `<small class="jpor">${[j.por ? esc(j.por) : '', j.desde ? `viene de la entrega ${folio(j.desde)}` : '', j.ed ? `editada ${esc(hmOf(j.ed.at))}${j.ed.por && j.ed.por !== j.por ? ' por ' + esc(j.ed.por) : ''}` : ''].filter(Boolean).join(' · ')}</small>` : ''}${j.recup ? `<small class="jrec">✓ ${recT(j).ok} por ${esc(j.recup.por)} · ${esc(fmtDH(j.recup.at))}</small>` : j.kind === 'rec' ? '<small class="jrec pend">Sigue en la entrega siguiente hasta que se resuelva</small>' : ''}</span>${j.kind === 'rec' ? `<span class="rstat ${j.recup ? 'ok' : 'no'}">${j.recup ? '✓ ' + recT(j).ok : recT(j).no}</span>` : ''}<span class="jbtns">${j.kind === 'rec' && !j.recup ? `<button type="button" class="btn sm primary recbtn" data-act="recNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}">${recT(j).marca}</button>` : ''}<button type="button" class="ebtn" data-act="editNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}" aria-label="Editar novedad" title="Editar">✎</button><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad" title="Quitar">×</button></span></div>`;
 function renderNov() {
   const e = cur(), box = $('#novList'); if (!box) return;
   const items = novItems(e).filter(j => !(vencDay(e) && j.txt === VENC_TXT));
@@ -2741,7 +2742,7 @@ const actions = {
     const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, j = store.draft[src] && store.draft[src][id];
     if (!j || isRO()) return;
     const ppl = staffP().filter(p => ['R', 'PM'].includes(rolOf(p.clave))).sort(claveSort);
-    openSheet(`<h2>${recT(j).marca}</h2><p>${esc(j.txt)}</p>
+    openSheet(`<h2>${recT(j).marca}</h2><p>${esc(nTxt(j))}</p>
       <label class="fld" for="recQuien"><span class="lbl">${recT(j).quien} (R o PM)</span><select id="recQuien"><option value="">Elegir…</option>${ppl.map(p => `<option value="${esc(staffLabel(p))}">${esc(staffLabel(p))}</option>`).join('')}</select></label>
       <label class="fld" for="recCuando"><span class="lbl">¿Cuándo?</span><input type="datetime-local" id="recCuando" value="${toLocalInput(new Date())}"></label>
       <p id="recErr" style="color:#b00020;font-weight:600;min-height:1.2em;margin:4px 0"></p>
