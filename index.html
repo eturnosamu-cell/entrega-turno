@@ -909,6 +909,7 @@ html.tvmode body::before{display:none}
 .rbox{display:flex;flex-direction:column;align-items:center;gap:2px}.rbox>span{font:700 11px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-3)}.rbox.na{opacity:.45}
 .jrec{display:block;margin-top:4px;font-weight:700;color:var(--good,#1d7a3a)}.jrec.pend{color:var(--warn-ink,#8a5a00)}.recbtn{white-space:nowrap}
 .rbox>label{font:700 11px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-3)}.rpbtn{border:1px solid var(--line);background:transparent;border-radius:6px;font:700 10px/1 var(--f-display);padding:3px 6px;color:var(--ink-3);cursor:pointer}.rbox input.isrp{font-size:15px;color:var(--info,#1e40af)}
+.tv-roles .tv-rl{font-size:14px;letter-spacing:.05em}.tv-rvr{display:flex;align-items:center;gap:8px;font-size:27px}.tv-rvr .tv-nm{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis}.tv-rd{flex:none;display:inline-flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;background:#ede914;color:#1b2166;border-radius:7px;padding:3px 7px;font:800 23px/1 var(--f-display)}.tv-rd small{font:700 9px/1 var(--f-display);letter-spacing:.1em;text-transform:uppercase}.tv-rd.rp{background:#aab3dd}.tv-rlr{display:flex;align-items:center;gap:10px}.tv-rlr .tv-rd{font-size:18px;letter-spacing:0}
 </style>
 </head>
 <body>
@@ -4157,16 +4158,18 @@ function tvRender() {
   const now = new Date(), nowM = now.getHours() * 60 + now.getMinutes(), toM = x => +hh(x) * 60 + (+String(x).slice(3, 5) || 0);
   const isToday = d && d.toDateString() === now.toDateString();
   const one = v => filled(v) ? esc(tvShort(v)) : 'Por asignar';
+  /* radio de cada persona, al lado de su nombre */
+  const radB = (m, k) => { const r = (m.radios || [])[{r:0, pm:1, c:2}[k]]; return filled(r) ? `<span class="tv-rd${isRP(r) ? ' rp' : ''}"><small>Radio</small>${isRP(r) ? 'RP' : esc(r)}</span>` : ''; };
   const role = (lbl, m, k) => {
     const segs = String(m[k] || '').split('/').map(x => x.trim()).filter(Boolean);
-    if (segs.length > 1) return `<div class="tv-rl">${lbl}</div><div class="tv-rv">${segs.map(x => esc(tvShort(x))).join(' <i class="tv-sl">/</i> ')}</div>`;
-    if (!isSplit(m, k)) return `<div class="tv-rl">${lbl}</div><div class="tv-rv${filled(m[k]) ? '' : ' miss'}">${one(m[k])}</div>`;
+    if (segs.length > 1) return `<div class="tv-rl">${lbl}</div><div class="tv-rv tv-rvr"><span class="tv-nm">${segs.map(x => esc(tvShort(x))).join(' <i class="tv-sl">/</i> ')}</span>${radB(m, k)}</div>`;
+    if (!isSplit(m, k)) return `<div class="tv-rl">${lbl}</div><div class="tv-rv tv-rvr${filled(m[k]) ? '' : ' miss'}"><span class="tv-nm">${one(m[k])}</span>${radB(m, k)}</div>`;
     const [ini, fin] = turnoHoras(e), h = splitHora(e, m, k), cm = toM(h);
     /* quién está ahora: en turno noche el cambio cruza la medianoche */
     let firstNow = null;
     if (live && isToday) firstNow = e.turno === 'Noche' ? (nowM >= toM(ini) || nowM < cm) : nowM < cm;
     const ln = (v, a, b, on) => `<div class="tv-rv sp${filled(v) ? '' : ' miss'}${on === false ? ' off' : ''}"><i>${hh(a)}–${hh(b)}</i>${one(v)}</div>`;
-    return `<div class="tv-rl">${lbl} · turno dividido</div>${ln(m[k], ini, h, firstNow === null ? null : firstNow)}${ln(m[k + '2'], h, fin, firstNow === null ? null : !firstNow)}`;
+    return `<div class="tv-rl tv-rlr">${lbl} · turno dividido${radB(m, k)}</div>${ln(m[k], ini, h, firstNow === null ? null : firstNow)}${ln(m[k + '2'], h, fin, firstNow === null ? null : !firstNow)}`;
   };
   const cards = e.moviles.map((m, i) => {
     const any = crewAny(m);
@@ -4174,8 +4177,7 @@ function tvRender() {
     const pill = !any ? '<span class="tv-pill">Sin asignar</span>' : full ? '<span class="tv-pill ok">Operativo</span>' : '<span class="tv-pill warn">Incompleto</span>';
     const rs = m.radios.filter(filled);
     return `<div class="tv-card${any ? '' : ' empty'}"><div class="tv-amb"><div class="tv-ch"><b>${esc(tvMovName(m, i))}</b>${pill}</div><span class="tv-vidslot" data-i="${i}"></span></div>
-      <div class="tv-roles">${i === BASICO ? '<div class="tv-rl">Tipo</div><div class="tv-rv">Básico</div>' : role('Reanimador', m, 'r')}${role('Paramédico', m, 'pm')}${role('Conductor', m, 'c')}</div>
-      <div class="tv-rad"><span>Radios</span><b>${rs.length ? esc(radTxt(m, ' · ')) : '—'}</b></div></div>`;
+      <div class="tv-roles">${i === BASICO ? '<div class="tv-rl">Tipo</div><div class="tv-rv">Básico</div>' : role('Reanimador', m, 'r')}${role('Paramédico', m, 'pm')}${role('Conductor', m, 'c')}</div></div>`;
   }).join('');
   const operativos = e.moviles.filter((m, i) => filled(m.id) && movKeys(i).every(k => crewOk(m, k))).length;
 
