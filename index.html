@@ -1670,6 +1670,14 @@ const autoNovs = e => {
   if (ins.mascara === 'SI') add('mascara', `Se ocupó máscara laríngea${filled(ins.mascaraN) ? ' Nº ' + ins.mascaraN : ''}`);
   if (ins.trocar === 'SI') add('trocar', `Se ocupó trocar de osteoclisis${ins.trocarTipo ? ' ' + ins.trocarTipo.toLowerCase() : ''}`);
   ((e && e.parches) || []).forEach((p, k) => { const n = num(p.uso); if (n > 0) add('par' + k, `Se ocupó ${p.name}${n > 1 ? ' (' + n + ')' : ''}`); });
+  /* refrigerador fuera de rango: medicamentos con cadena de frío */
+  if (e && e.refri) {
+    const [a, b] = tRange('refri'), v = tVals(e, 'refri'), cf = 'Revisar medicamentos con cadena de frío.', fr = (id, sev, txt) => out.push({id:'auto-refri-' + id, sev, tag:'Refrigerador', txt, por:'Automático · desde Temperatura del refrigerador'});
+    if (v.mo != null && v.mo > b) fr('alza', 'r', `Alza de temperatura del refrigerador: ${fmtT(v.mo)} °C ahora (rango ${rTxt(a, b)}). ${cf}`);
+    else if (v.mo != null && v.mo < a) fr('baja', 'r', `Refrigerador bajo el rango: ${fmtT(v.mo)} °C ahora (rango ${rTxt(a, b)}), riesgo de congelamiento. ${cf}`);
+    else if (v.mx != null && v.mx > b) fr('max', 'y', `El refrigerador llegó a ${fmtT(v.mx)} °C de máxima en el turno (rango ${rTxt(a, b)}). ${cf}`);
+    else if (v.mn != null && v.mn < a) fr('min', 'y', `El refrigerador bajó a ${fmtT(v.mn)} °C de mínima en el turno (rango ${rTxt(a, b)}). ${cf}`);
+  }
   return out;
 };
 /* material de extricación pendiente (rescatar, guardar o reponer): novedad que pasa de turno en turno hasta que se resuelve */
@@ -2369,7 +2377,11 @@ function backupMode() {
   if (scriptUrl()) return 'script';
   return BK.folder ? 'folder' : 'download';
 }
-const pendingBackups = () => store.history.filter(h => !h.ejemplo && h.savedAt && !h.backup).sort((a, b) => String(a.savedAt).localeCompare(String(b.savedAt)));
+/* el PDF lo sube solo el equipo donde se cerró la entrega: así queda uno por entrega */
+const BK_MINE = 'samu-entrega-bk-mine';
+const bkMine = () => { try { return JSON.parse(localStorage.getItem(BK_MINE) || '[]'); } catch (e) { return []; } };
+const bkAddMine = id => { try { const a = bkMine().filter(x => x !== id); a.push(id); localStorage.setItem(BK_MINE, JSON.stringify(a.slice(-60))); } catch (e) {} };
+const pendingBackups = () => { const mine = bkMine(); return store.history.filter(h => !h.ejemplo && h.savedAt && !h.backup && mine.includes(h.id)).sort((a, b) => String(a.savedAt).localeCompare(String(b.savedAt))); };
 function backupErrMsg(err) {
   switch (err && err.code) {
     case 'needs_reauth': return 'Google Drive pide reconectarse: en claude.ai ve a Configuración, Conectores.';
@@ -2395,11 +2407,9 @@ async function backupEntry(e) {
   if (mode === 'folder') {
     if (!(await folderPerm(false))) throw {code:'perm'};
     await writeToFolder(name, blob);
-    try { await writeToFolder('respaldo-datos-entrega-turno.json', JSON.stringify(store)); } catch (x) {}
     e.backup = {at, where:'folder', place:BK.folderName, name};
   } else if (mode === 'script') {
     const r = await scriptUpload(name, blob);
-    try { await scriptUpload('respaldo-datos-entrega-turno.json', new Blob([JSON.stringify(store)], {type:'application/json'})); } catch (x) {}
     e.backup = {at, where:'drive', place:'Google Drive', name, url:r.url};
   } else if (mode === 'drive') {
     const r = await driveUpload(name, blob);
@@ -2883,6 +2893,7 @@ const actions = {
     view = {mode:'draft', id:null};
     renderAll(); window.scrollTo({top:0, behavior:'auto'});
     toast(`Entrega ${folio(e.numero)} guardada${hadUse ? '. Stock actualizado' : ''}`);
+    bkAddMine(e.id);
     const bk = auto && backupMode() !== 'none' ? Promise.resolve(permP).then(() => runBackups([e])) : Promise.resolve();
     if (SES) {
       toast('Entrega guardada. Enviando a Google…');
