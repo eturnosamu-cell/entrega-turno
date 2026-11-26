@@ -911,6 +911,7 @@ html.tvmode body::before{display:none}
 .rbox>label{font:700 11px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-3)}.rpbtn{border:1px solid var(--line);background:transparent;border-radius:6px;font:700 10px/1 var(--f-display);padding:3px 6px;color:var(--ink-3);cursor:pointer}.rbox input.isrp{font-size:15px;color:var(--info,#1e40af)}
 .tv-roles .tv-rl{font-size:14px;letter-spacing:.05em}.tv-rvr{display:flex;align-items:center;gap:8px;font-size:27px}.tv-rvr .tv-nm{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis}.tv-rd{flex:none;display:inline-flex;flex-direction:column;align-items:center;gap:2px;min-width:44px;background:#ede914;color:#1b2166;border-radius:7px;padding:3px 7px;font:800 23px/1 var(--f-display)}.tv-rd small{font:700 9px/1 var(--f-display);letter-spacing:.1em;text-transform:uppercase}.tv-rd.rp{background:#aab3dd}.tv-rlr{display:flex;align-items:center;gap:10px}.tv-rlr .tv-rd{font-size:18px;letter-spacing:0}
 .rstat{align-self:center;flex:none;font:800 12px/1.1 var(--f-display);letter-spacing:.04em;text-transform:uppercase;padding:7px 9px;border-radius:7px;text-align:center}.rstat.no{background:#fde7c2;color:#7a4a00;border:1px solid #f0b75a}.rstat.ok{background:#d6f3df;color:#14612e;border:1px solid #7ccb94}.jitem:has(.rstat){grid-template-columns:56px minmax(0,1fr) auto auto;column-gap:8px}
+.resc{display:flex;flex-direction:column;gap:8px}.resc .linkbtn{align-self:flex-start}.rescnota{margin:0;font-size:13px}
 </style>
 </head>
 <body>
@@ -1098,7 +1099,7 @@ function blankEntry() {
     radios: {cargadas:null, base:'', llamado:'', registro:[0,1,2].map(() => ({func:'', num:'', ent:false})), propias:''},
     oxigeno: {g:'', p:'', vacios:''},
     reserva: {}, reservaDet: {},
-    extr: {encargado:'', guardar:null, guardarLugar:'', rescatar:null, rescatarLugar:'', reponer:null, reponerDet:''},
+    extr: {encargado:'', guardar:null, guardarLugar:'', rescatar:null, rescatarLugar:'', rescatarLugar2:'', rescatarLugar3:'', rescatarLugar4:'', reponer:null, reponerDet:''},
     bodega: {encargado:'', temp:null, hum:'', limpia:null, reponer:null, obs:''},
     salaeq: {encargado:'', temp:null, hum:'', cargando:null, limpia:null, obs:''},
     equipos: Object.fromEntries(EQUIPOS.map(([k]) => [k, ''])),
@@ -1442,7 +1443,7 @@ function renderForm(e) {
     card('s-extricacion', 'Material de extricación', `${staffField('extr.encargado', 'Encargado (PM)', 'PM')}
       <div class="ynlist">
         <div class="ynblock">${yn('extr.guardar', 'Pendiente guardar', 'SI')}${cond('extr.guardar', 'SI', inp('extr.guardarLugar', 'Lugar'))}</div>
-        <div class="ynblock">${yn('extr.rescatar', 'Pendiente por rescatar', 'SI')}${cond('extr.rescatar', 'SI', inp('extr.rescatarLugar', 'Lugar'))}</div>
+        <div class="ynblock">${yn('extr.rescatar', 'Pendiente por rescatar', 'SI')}${cond('extr.rescatar', 'SI', `<div class="resc">${[1, 2, 3, 4].map(n => `<div class="rescrow" data-resc="${n}"${n > 1 ? ' hidden' : ''}>${inp('extr.rescatarLugar' + (n > 1 ? n : ''), n === 1 ? 'Qué material y dónde' : `Material ${n}`)}</div>`).join('')}<button type="button" class="linkbtn" data-act="rescMas" id="rescMas" hidden>+ Otro material (de otro lugar)</button><p class="muted rescnota">Escribe qué material y dónde quedó, y presiona Enter para agregar otro (hasta 4).</p></div>`)}</div>
         <div class="ynblock">${yn('extr.reponer', 'Pendiente reponer', 'SI')}${cond('extr.reponer', 'SI', inp('extr.reponerDet', 'Especifique'))}</div>
       </div>`) + `</div>`,
     `<div class="duo">` +
@@ -1609,7 +1610,7 @@ function alertsOf(e, opts = {}) {
   });
   const x = e.extr;
   if (x.guardar === 'SI') add('warn', 's-extricacion', `Extricación: material pendiente de guardar${x.guardarLugar ? ' · ' + x.guardarLugar : ''}`);
-  if (x.rescatar === 'SI') add('warn', 's-extricacion', `Extricación: material pendiente por rescatar${x.rescatarLugar ? ' · ' + x.rescatarLugar : ''}`);
+  if (x.rescatar === 'SI') add('warn', 's-extricacion', `Extricación: material pendiente por rescatar${rescList(x).length ? ' · ' + rescList(x).join(' / ') : ''}`);
   if (x.reponer === 'SI') add('warn', 's-extricacion', `Extricación: pendiente reponer${x.reponerDet ? ' · ' + x.reponerDet : ''}`);
   const b = e.bodega;
   if (b.limpia === 'NO') add('warn', 's-bodega', 'Bodega: sala sin limpiar u ordenar');
@@ -1677,18 +1678,23 @@ const REC_T = {
   guardar:{f:'guardar', l:'guardarLugar', txt:'Material de extricación pendiente de guardar', ok:'Guardado', no:'Sin guardar', marca:'Marcar guardado', quien:'¿Quién lo guardó?'},
   reponer:{f:'reponer', l:'reponerDet', txt:'Material de extricación pendiente de reponer', ok:'Repuesto', no:'Sin reponer', marca:'Marcar repuesto', quien:'¿Quién lo repuso?'}
 };
+let RESC_SHOW = 1;
 const recT = j => REC_T[j.rtipo] || REC_T.rescatar;
-const recId = (e, t) => (t === 'rescatar' ? 'rec-extr-' : 'rec-' + t + '-') + ((e && e.id) || '');
+const rescList = x => [1, 2, 3, 4].map(n => (x || {})['rescatarLugar' + (n > 1 ? n : '')]).filter(filled);
+const recId = (e, t, n = 1) => (t === 'rescatar' ? 'rec-extr' + (n > 1 ? n : '') + '-' : 'rec-' + t + '-') + ((e && e.id) || '');
 const recTxt = (x, t) => `${REC_T[t].txt}${filled(x[REC_T[t].l]) ? ' · ' + x[REC_T[t].l] : ''}`;
 function syncRecNov(e) {
   if (!e || view.mode !== 'draft' || e !== store.draft) return;
   const x = e.extr || {}; e.novs = e.novs || {};
   Object.keys(REC_T).forEach(t => {
-    const id = recId(e, t), j = e.novs[id];
-    if (x[REC_T[t].f] === 'SI') {
-      if (!j) e.novs[id] = {at:new Date().toISOString(), txt:recTxt(x, t), sev:'g', kind:'rec', rtipo:t, por:SES ? sesLabel() : ''};
-      else if (!j.recup && j.txt !== recTxt(x, t)) j.txt = recTxt(x, t);
-    } else if (j && !j.recup) delete e.novs[id];
+    const rows = t === 'rescatar' ? [1, 2, 3, 4] : [1];
+    rows.forEach(n => {
+      const id = recId(e, t, n), j = e.novs[id], fl = REC_T[t].l + (n > 1 ? n : ''), txt = `${REC_T[t].txt}${filled(x[fl]) ? ' · ' + x[fl] : ''}`;
+      if (x[REC_T[t].f] === 'SI' && (n === 1 || filled(x[fl]))) {
+        if (!j) e.novs[id] = {at:new Date().toISOString(), txt, sev:'g', kind:'rec', rtipo:t, rrow:n, por:SES ? sesLabel() : ''};
+        else if (!j.recup && j.txt !== txt) j.txt = txt;
+      } else if (j && !j.recup) delete e.novs[id];
+    });
   });
 }
 const fmtDH = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -1774,6 +1780,9 @@ function refresh() {
   const miss = sectionMissing(e), al = alertsOf(e, {stock: !isRO()});
 
   $$('#fs [data-show]').forEach(el => { const [p, v] = el.dataset.show.split('='); el.hidden = get(e, p) !== v; });
+  { const x = e.extr || {}, f = n => x['rescatarLugar' + (n > 1 ? n : '')]; let last = 1;
+    [2, 3, 4].forEach(n => { const r = $(`[data-resc="${n}"]`); const vis = filled(f(n)) || RESC_SHOW >= n; if (r) r.hidden = !vis; if (vis) last = n; });
+    const mb = $('#rescMas'); if (mb) mb.hidden = isRO() || last >= 4 || !filled(f(last)); }
 
   const critSecs = new Set(al.filter(a => a.sev === 'crit').map(a => a.sec));
   SECTIONS.forEach(([id]) => {
@@ -2256,7 +2265,7 @@ function buildPdfK(e, k) {
   sec('Revisión de áreas', {head:[['Área', 'Encargado', 'Detalle']], body:cl([
     ['Estadística', '', `Siniestros durante el turno: ${yn2(e.est.siniestros)}${e.est.siniestros === 'SI' && e.est.incTipo ? ' · Incidente: ' + e.est.incTipo + (e.est.incDet ? ' (' + e.est.incDet + ')' : '') : ''}\nNotificación FAF: ${yn2(e.est.faf)}${e.est.faf === 'SI' && e.est.fafNombre ? ' · ' + e.est.fafNombre + (e.est.fafEnviado ? ' · correo a jefatura ' + hmOf(e.est.fafEnviado) : '') : ''}`],
     ['Radios', '', `Cargadas: ${yn2(e.radios.cargadas)} · En base: ${e.radios.base || '-'} · En llamado: ${e.radios.llamado || '-'}${filled(e.radios.propias) ? '\nRadios propias: ' + e.radios.propias : ''}`],
-    ['Material de extricación', x.encargado, `Pendiente guardar: ${yn2(x.guardar)}${x.guardar === 'SI' && x.guardarLugar ? ' (' + x.guardarLugar + ')' : ''}\nPendiente por rescatar: ${yn2(x.rescatar)}${x.rescatar === 'SI' && x.rescatarLugar ? ' (' + x.rescatarLugar + ')' : ''}\nPendiente reponer: ${yn2(x.reponer)}${x.reponer === 'SI' && x.reponerDet ? ' (' + x.reponerDet + ')' : ''}`],
+    ['Material de extricación', x.encargado, `Pendiente guardar: ${yn2(x.guardar)}${x.guardar === 'SI' && x.guardarLugar ? ' (' + x.guardarLugar + ')' : ''}\nPendiente por rescatar: ${yn2(x.rescatar)}${x.rescatar === 'SI' && rescList(x).length ? ' (' + rescList(x).join(' / ') + ')' : ''}\nPendiente reponer: ${yn2(x.reponer)}${x.reponer === 'SI' && x.reponerDet ? ' (' + x.reponerDet + ')' : ''}`],
     ['Bodega diaria', b.encargado, `${tPdf(e, 'bodega')}\nLimpia y ordenada: ${yn2(b.limpia)} · Pendiente reponer: ${yn2(b.reponer)}${filled(b.obs) ? '\nObservaciones: ' + b.obs : ''}`],
     ['Sala de equipos', sq.encargado, `${tPdf(e, 'salaeq')}\nEquipos cargando: ${yn2(sq.cargando)} · Limpia y ordenada: ${yn2(sq.limpia)}${filled(sq.obs) ? '\nObservaciones: ' + sq.obs : ''}`]
   ]), columnStyles:{0:Object.assign({cellWidth:36}, bold), 1:{cellWidth:50}}});
@@ -2721,6 +2730,13 @@ const actions = {
     const el = document.getElementById(fid(`moviles.${i}.radios.${k}`)); if (el) el.value = m.radios[k];
     changed();
   },
+  rescMas() {
+    const x = cur().extr || {}; let last = 1;
+    [2, 3, 4].forEach(n => { const r = $(`[data-resc="${n}"]`); if (r && !r.hidden) last = n; });
+    if (last >= 4) return;
+    RESC_SHOW = Math.max(RESC_SHOW, last + 1); refresh();
+    const nx = document.getElementById(fid('extr.rescatarLugar' + (last + 1))); if (nx) nx.focus();
+  },
   recNov(a) {
     const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, j = store.draft[src] && store.draft[src][id];
     if (!j || isRO()) return;
@@ -2737,7 +2753,8 @@ const actions = {
     const quien = $('#recQuien').value, cu = $('#recCuando').value, d = cu ? new Date(cu) : new Date();
     if (!quien) { $('#recErr').textContent = 'Elige quién fue (R o PM).'; return; }
     j.recup = {por:quien, at:(isNaN(d) ? new Date() : d).toISOString(), reg:SES ? sesLabel() : ''}; j.sev = 'g';
-    const t = j.rtipo || 'rescatar'; if (id === recId(e, t) && e.extr) e.extr[REC_T[t].f] = 'NO';
+    const t = j.rtipo || 'rescatar', mine = (t === 'rescatar' ? [1, 2, 3, 4] : [1]).map(n => e.novs[recId(e, t, n)]).filter(Boolean);
+    if (e.extr && mine.includes(j) && mine.every(x => x.recup)) e.extr[REC_T[t].f] = 'NO';
     closeSheet(); renderAll(); changed(); toast(`${recT(j).ok}: queda registrado quién y cuándo`);
   },
   edSevPick(a) { $$('#edSev button').forEach(b => b.setAttribute('aria-pressed', b === a ? 'true' : 'false')); $('#edSev').dataset.sev = a.dataset.sev; },
@@ -3818,6 +3835,12 @@ async function verifyPin(pin) {
   }
 }
 document.addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && ev.target && ev.target.dataset && /^extr\.rescatarLugar\d?$/.test(ev.target.dataset.bind || '')) {
+    ev.preventDefault();
+    const n = +(ev.target.dataset.bind.match(/(\d)$/) || [0, 1])[1];
+    if (n < 4 && filled(ev.target.value)) { RESC_SHOW = Math.max(RESC_SHOW, n + 1); refresh(); const nx = document.getElementById(fid('extr.rescatarLugar' + (n + 1))); if (nx) nx.focus(); }
+    return;
+  }
   if (ev.key !== 'Enter' || !ev.target || !ev.target.id) return;
   const b = ev.target.id === 'encPin' ? $('[data-act="encTakeOk"]') : ev.target.id === 'cierrePin' ? $('[data-act="saveSign"]') : null;
   if (b) { ev.preventDefault(); b.click(); }
