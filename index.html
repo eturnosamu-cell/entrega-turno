@@ -907,6 +907,7 @@ html.tvmode body::before{display:none}
 .jbtns{display:flex;gap:4px;align-items:center;margin-left:auto}.ebtn{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink-3);font-size:19px;line-height:1;cursor:pointer}.ebtn:hover{background:rgba(0,0,0,.06)}fieldset:disabled .jbtns{display:none}.jitem{grid-template-columns:56px minmax(0,1fr) auto}
 .tgrid.t2{grid-template-columns:repeat(2,minmax(0,1fr))}.tgrid.t2 .tin input{font-size:28px}.thora{margin:0 0 8px;font-weight:700;color:var(--ink-2,#334)}
 .rbox{display:flex;flex-direction:column;align-items:center;gap:2px}.rbox>span{font:700 11px/1 var(--f-display);letter-spacing:.06em;color:var(--ink-3)}.rbox.na{opacity:.45}
+.jrec{display:block;margin-top:4px;font-weight:700;color:var(--good,#1d7a3a)}.jrec.pend{color:var(--warn-ink,#8a5a00)}.recbtn{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1434,11 +1435,11 @@ function renderForm(e) {
         <div class="ynblock">${yn('extr.reponer', 'Pendiente reponer', 'SI')}${cond('extr.reponer', 'SI', inp('extr.reponerDet', 'Especifique'))}</div>
       </div>`) + `</div>`,
     `<div class="duo">` +
-    card('s-bodega', 'Bodega diaria', `${staffField('bodega.encargado', 'Encargado (PM)', 'PM')}
+    card('s-bodega', 'Bodega diaria', `${staffField('bodega.encargado', 'Encargado')}
       ${tempBlock('bodega')}
       <div class="ynlist">${yn('bodega.limpia', 'Sala limpia y ordenada')}${yn('bodega.reponer', 'Pendiente reponer', 'SI')}</div>
       ${ta('bodega.obs', 'Observaciones', 2)}`, `Una toma por turno: 19:00 en turno largo, 07:00 en turno noche. Rango de temperatura ${rTxt(...tRange('bodega'))} (se cambia en Ajustes).`) +
-    card('s-salaeq', 'Sala de equipos', `${staffField('salaeq.encargado', 'Encargado (PM)', 'PM')}
+    card('s-salaeq', 'Sala de equipos', `${staffField('salaeq.encargado', 'Encargado')}
       ${tempBlock('salaeq')}
       <div class="ynlist">${yn('salaeq.cargando', 'Equipos cargando')}${yn('salaeq.limpia', 'Sala limpia y ordenada')}</div>
       ${ta('salaeq.obs', 'Observaciones', 2)}`, `Una toma por turno: 19:00 en turno largo, 07:00 en turno noche. Rango de temperatura ${rTxt(...tRange('salaeq'))} (se cambia en Ajustes).`) + `</div>`,
@@ -1652,10 +1653,29 @@ const sevRank = s => SEV_RANK[s] != null ? SEV_RANK[s] : 3;
 /* novedades del turno; incluye las que se anotaron antes en la sección «Novedades de jefatura», que ya no existe */
 const novItems = e => ['novs', 'jefatura'].flatMap(src => Object.keys((e && e[src]) || {}).map(id => Object.assign({id, _src:src}, e[src][id]))).filter(j => j && filled(j.txt)).sort((a, b) => String(a.at).localeCompare(String(b.at)));
 /* novedades automáticas: salen solas mientras se cumpla la condición */
-const autoNovs = e => { const x = (e && e.extr) || {}; return x.rescatar === 'SI' ? [{id:'auto-extr', sev:'g', tag:'Extricación', txt:`Recuperar material de extricación${filled(x.rescatarLugar) ? ' · ' + x.rescatarLugar : ''}`, por:'Automático · desde Material de extricación'}] : []; };
+const autoNovs = e => {
+  const ins = (e && e.insumos) || {}, out = [], add = (id, txt) => out.push({id:'auto-' + id, sev:'g', tag:'Insumos', txt, por:'Automático · desde Insumos de alto costo'});
+  if (ins.mascara === 'SI') add('mascara', `Se ocupó máscara laríngea${filled(ins.mascaraN) ? ' Nº ' + ins.mascaraN : ''}`);
+  if (ins.trocar === 'SI') add('trocar', `Se ocupó trocar de osteoclisis${ins.trocarTipo ? ' ' + ins.trocarTipo.toLowerCase() : ''}`);
+  ((e && e.parches) || []).forEach((p, k) => { const n = num(p.uso); if (n > 0) add('par' + k, `Se ocupó ${p.name}${n > 1 ? ' (' + n + ')' : ''}`); });
+  return out;
+};
+/* material de extricación por recuperar: novedad que pasa de turno en turno hasta que alguien lo recupera */
+const recId = e => 'rec-extr-' + ((e && e.id) || '');
+const recTxt = x => `Material de extricación por recuperar${filled(x.rescatarLugar) ? ' · ' + x.rescatarLugar : ''}`;
+function syncRecNov(e) {
+  if (!e || view.mode !== 'draft' || e !== store.draft) return;
+  const x = e.extr || {}, id = recId(e), j = (e.novs = e.novs || {})[id];
+  if (x.rescatar === 'SI') {
+    if (!j) e.novs[id] = {at:new Date().toISOString(), txt:recTxt(x), sev:'g', kind:'rec', por:SES ? sesLabel() : ''};
+    else if (!j.recup && j.txt !== recTxt(x)) j.txt = recTxt(x);
+  } else if (j && !j.recup) delete e.novs[id];
+}
+const fmtDH = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const novTxt = j => j.txt + (j.recup ? ` · RECUPERADO por ${j.recup.por} el ${fmtDH(j.recup.at)}` : j.kind === 'rec' ? ' · pendiente' : '');
 const sevPick = k => `<div class="sevpick" id="${k}Sev" role="group" aria-label="Color según gravedad"><span class="sl">Color:</span>${['g','y','r'].map(v => `<button type="button" data-act="pickSev" data-for="${k}" data-sev="${v}" aria-pressed="false"><i></i>${SEV_NAME[v]}</button>`).join('')}</div>`;
 function resetSev(k) { const box = $('#' + k + 'Sev'); if (box) { delete box.dataset.sev; box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false')); } const inp = $('#' + k + 'New'); if (inp) { inp.disabled = true; inp.placeholder = 'Primero elige el color'; } }
-const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por || j.ed || j.desde ? `<small class="jpor">${[j.por ? esc(j.por) : '', j.desde ? `viene de la entrega ${folio(j.desde)}` : '', j.ed ? `editada ${esc(hmOf(j.ed.at))}${j.ed.por && j.ed.por !== j.por ? ' por ' + esc(j.ed.por) : ''}` : ''].filter(Boolean).join(' · ')}</small>` : ''}</span><span class="jbtns"><button type="button" class="ebtn" data-act="editNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}" aria-label="Editar novedad" title="Editar">✎</button><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad" title="Quitar">×</button></span></div>`;
+const jitemHtml = (j, del) => `<div class="jitem${SEV_NAME[j.sev] ? ' sev-' + j.sev : ''}"><span class="jh">${jefHora(j)}</span><span class="jt">${SEV_NAME[j.sev] ? `<span class="jsev ${j.sev}">${SEV_NAME[j.sev]}</span>` : ''}${esc(j.txt)}${j.por || j.ed || j.desde ? `<small class="jpor">${[j.por ? esc(j.por) : '', j.desde ? `viene de la entrega ${folio(j.desde)}` : '', j.ed ? `editada ${esc(hmOf(j.ed.at))}${j.ed.por && j.ed.por !== j.por ? ' por ' + esc(j.ed.por) : ''}` : ''].filter(Boolean).join(' · ')}</small>` : ''}${j.recup ? `<small class="jrec">✓ Recuperado por ${esc(j.recup.por)} · ${esc(fmtDH(j.recup.at))}</small>` : j.kind === 'rec' ? '<small class="jrec pend">Pendiente: sigue en la entrega siguiente hasta que se recupere</small>' : ''}</span><span class="jbtns">${j.kind === 'rec' && !j.recup ? `<button type="button" class="btn sm primary recbtn" data-act="recNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}">Recuperado</button>` : ''}<button type="button" class="ebtn" data-act="editNov" data-src="${del === 'delJef' ? 'jefatura' : 'novs'}" data-id="${esc(j.id)}" aria-label="Editar novedad" title="Editar">✎</button><button type="button" class="xbtn" data-act="${del}" data-id="${esc(j.id)}" aria-label="Quitar novedad" title="Quitar">×</button></span></div>`;
 function renderNov() {
   const e = cur(), box = $('#novList'); if (!box) return;
   const items = novItems(e).filter(j => !(vencDay(e) && j.txt === VENC_TXT));
@@ -2238,7 +2258,7 @@ function buildPdfK(e, k) {
   const rst = mo == null ? 'Sin lectura' : (mo < S.rMin || mo > S.rMax) ? 'Fuera de rango' : ((mx != null && mx > S.rMax) || (mn != null && mn < S.rMin)) ? 'Excursión registrada' : 'En rango';
   sec(`Temperatura refrigerador (rango +${S.rMin} a +${S.rMax} °C)`, {head:[['T° momento', 'T° máxima', 'T° mínima', 'Responsable', 'Estado']], body:cl([[mo != null ? fmtT(mo) + ' °C' : '', mx != null ? fmtT(mx) + ' °C' : '', mn != null ? fmtT(mn) + ' °C' : '', r.resp, rst]])});
   const novs = novItems(e).concat(autoNovs(e));
-  if (novs.length) sec('Novedades, incidentes u observaciones del turno', {body:cl(novs.map(j => [jefHora(j), SEV_NAME[j.sev] || '', j.txt])).concat(filled(e.novedades) ? [[{content:pdfTxt('Texto anterior: ' + e.novedades), colSpan:3}]] : []), columnStyles:{0:Object.assign({cellWidth:18}, bold), 1:Object.assign({cellWidth:24}, bold)}});
+  if (novs.length) sec('Novedades, incidentes u observaciones del turno', {body:cl(novs.map(j => [jefHora(j), SEV_NAME[j.sev] || '', novTxt(j)])).concat(filled(e.novedades) ? [[{content:pdfTxt('Texto anterior: ' + e.novedades), colSpan:3}]] : []), columnStyles:{0:Object.assign({cellWidth:18}, bold), 1:Object.assign({cellWidth:24}, bold)}});
   else sec('Novedades, incidentes u observaciones del turno', {body:cl([[filled(e.novedades) ? e.novedades : 'Sin novedades registradas']])});
   const al = alertsOf(e);
   if (al.length) sec('Alertas registradas', {body:cl(al.map(a => [a.sev === 'crit' ? 'Crítica' : a.sev === 'warn' ? 'Aviso' : 'Info', a.text])), columnStyles:{0:Object.assign({cellWidth:18}, bold)}});
@@ -2674,6 +2694,25 @@ const actions = {
       <div class="sheet-act"><button type="button" class="btn" data-act="${amb && isRO() ? 'ambNov' : 'closeSheet'}">Cancelar</button><button type="button" class="btn primary" data-act="editNovSave" data-src="${src}" data-id="${esc(id)}">Guardar cambios</button></div>`);
     const t = $('#edTxt'); t.value = j.txt || ''; t.focus(); t.setSelectionRange(t.value.length, t.value.length);
   },
+  recNov(a) {
+    const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, j = store.draft[src] && store.draft[src][id];
+    if (!j || isRO()) return;
+    const ppl = staffP().filter(p => ['R', 'PM'].includes(rolOf(p.clave))).sort(claveSort);
+    openSheet(`<h2>Material recuperado</h2><p>${esc(j.txt)}</p>
+      <label class="fld" for="recQuien"><span class="lbl">¿Quién lo recuperó? (R o PM)</span><select id="recQuien"><option value="">Elegir…</option>${ppl.map(p => `<option value="${esc(staffLabel(p))}">${esc(staffLabel(p))}</option>`).join('')}</select></label>
+      <label class="fld" for="recCuando"><span class="lbl">¿Cuándo?</span><input type="datetime-local" id="recCuando" value="${toLocalInput(new Date())}"></label>
+      <p id="recErr" style="color:#b00020;font-weight:600;min-height:1.2em;margin:4px 0"></p>
+      <div class="sheet-act"><button type="button" class="btn" data-act="closeSheet">Cancelar</button><button type="button" class="btn primary" data-act="recNovSave" data-src="${src}" data-id="${esc(id)}">Marcar como recuperado</button></div>`);
+  },
+  recNovSave(a) {
+    const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, e = store.draft, j = e[src] && e[src][id];
+    if (!j || isRO()) return;
+    const quien = $('#recQuien').value, cu = $('#recCuando').value, d = cu ? new Date(cu) : new Date();
+    if (!quien) { $('#recErr').textContent = 'Elige quién lo recuperó.'; return; }
+    j.recup = {por:quien, at:(isNaN(d) ? new Date() : d).toISOString(), reg:SES ? sesLabel() : ''}; j.sev = 'g';
+    if (id === recId(e) && e.extr) e.extr.rescatar = 'NO';
+    closeSheet(); renderAll(); changed(); toast('Material marcado como recuperado');
+  },
   edSevPick(a) { $$('#edSev button').forEach(b => b.setAttribute('aria-pressed', b === a ? 'true' : 'false')); $('#edSev').dataset.sev = a.dataset.sev; },
   editNovSave(a) {
     const src = a.dataset.src === 'jefatura' ? 'jefatura' : 'novs', id = a.dataset.id, d = store.draft;
@@ -2785,6 +2824,7 @@ const actions = {
     if (!store.draft.cierre || !isEnc()) return; /* solo desde saveSign, con la clave del jefe */
     const auto = (store.settings.backup || {}).auto !== false;
     const permP = SAVE_PERM; SAVE_PERM = null;
+    syncRecNov(store.draft);
     const e = store.draft, hadUse = [e.controlados, e.generales, e.parches].some(arr => arr.some(x => (num(x.uso) || 0) > 0));
     e.numero = store.settings.nextNum; e.savedAt = new Date().toISOString();
     if (SES) e.savedBy = sesLabel();
@@ -2792,7 +2832,7 @@ const actions = {
     store.settings.nextNum++;
     store.draft = blankEntry();
     /* las novedades siguen en el turno siguiente hasta que un jefe de turno las quite */
-    ['novs', 'jefatura'].forEach(src => Object.entries(e[src] || {}).forEach(([id, j]) => { if (j && filled(j.txt)) store.draft[src][id] = Object.assign(clone(j), {desde:j.desde || e.numero}); }));
+    ['novs', 'jefatura'].forEach(src => Object.entries(e[src] || {}).forEach(([id, j]) => { if (j && filled(j.txt) && !j.recup) store.draft[src][id] = Object.assign(clone(j), {desde:j.desde || e.numero}); }));
     e.stockSnap = {}; [e.controlados, e.generales, e.parches].forEach(arr => arr.forEach(x => { if ((num(x.uso) || 0) > 0) { const i = stockInfo(x.name); if (i) e.stockSnap[x.name] = i.disp; } }));
     closeSheet(); persist();
     view = {mode:'draft', id:null};
@@ -3421,7 +3461,7 @@ function rerenderRadios() { const box = $('#radRows'); box.innerHTML = radioRows
 function rerenderGen() { const box = $('#genGrid'); box.innerHTML = genTiles(cur()); fillInputs(box); applyGenFilter(); }
 
 /* ================== eventos ================== */
-function changed() { refresh(); if (!isRO()) schedulePersist(); }
+function changed() { if (!isRO()) syncRecNov(store.draft); refresh(); if (!isRO()) schedulePersist(); }
 
 document.addEventListener('input', ev => {
   const t = ev.target;
@@ -4118,7 +4158,7 @@ function tvRender() {
   const TV_SKIP = new Set(['s-radios', 's-oxigeno', 's-moviles']);
   const nvRow = (cls, tag, txt) => `<div class="tv-nv"><span class="tv-tag ${cls}">${esc(tag)}</span><span class="tv-nt">${esc(txt)}</span></div>`;
   const rows = [];
-  novItems(e).forEach(j => rows.push({k:sevRank(j.sev), at:String(j.at || ''), html:nvRow(SEV_NAME[j.sev] ? 'sev-' + j.sev : '', 'Novedad' + (jefHora(j) ? ' ' + jefHora(j) : ''), j.txt)}));
+  novItems(e).forEach(j => rows.push({k:sevRank(j.sev), at:String(j.at || ''), html:nvRow(SEV_NAME[j.sev] ? 'sev-' + j.sev : '', j.kind === 'rec' ? (j.recup ? 'Recuperado' : 'Por recuperar') : 'Novedad' + (jefHora(j) ? ' ' + jefHora(j) : ''), novTxt(j))}));
   autoNovs(e).forEach(j => rows.push({k:sevRank(j.sev), at:'~', html:nvRow('sev-' + j.sev, j.tag, j.txt)}));
   String(e.novedades || '').split('\n').map(t => t.replace(/^[\s•\-–]+/, '').trim()).filter(Boolean).forEach(t => rows.push({k:3, at:'~', html:nvRow('', 'Novedad', t)}));
   alertsOf(e).filter(a => a.sev === 'crit' && !TV_SKIP.has(a.sec)).forEach(a => rows.push({k:0, at:'~', html:nvRow('sev-r', a.tag || TV_TAG[a.sec] || secName(a.sec), a.text)}));
